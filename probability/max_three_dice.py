@@ -103,7 +103,9 @@ results = []
 for i in range(100000):
     results.append(roll_maximum())
 
-len(results)
+average = sum(results) / len(results)
+print("Simulated E[M]:", average)
+
 
 # ============================================================
 # PART 4
@@ -112,8 +114,14 @@ len(results)
 # Derive this mathematically first.
 # Then implement your calculation in Python.
 # ============================================================
-average = sum(results) / len(results)
-print(average)
+theoretical_mean = 0
+
+for k in range(1, 7):
+    p_m_equals_k = (k / 6)**3 - ((k - 1) / 6)**3
+    theoretical_mean += k * p_m_equals_k
+
+print("Theoretical E[M]:", theoretical_mean)
+
 
 
 
@@ -123,7 +131,9 @@ print(average)
 #
 # Estimate P(M = k) for k = 1,...,6 from your simulations.
 # ============================================================
-
+for k in range(1, 7):
+    empirical_probability = results.count(k) / len(results)
+    print(f"Empirical P(M = {k}) = {empirical_probability:.4f}")
 
 
 
@@ -138,7 +148,9 @@ print(average)
 # Think about how to obtain P(M = k) from this.
 # ============================================================
 
-
+for k in range(1, 7):
+    theoretical_probability = (k / 6)**3 - ((k - 1) / 6)**3
+    print(f"Theoretical P(M = {k}) = {theoretical_probability:.4f}")
 
 
 # ============================================================
@@ -146,4 +158,17 @@ print(average)
 # ============================================================
 
 def expected_maximum(n_dice, n_sides, n_simulations):
-    pass
+
+    results = []
+
+    for i in range(n_simulations):
+
+        rolls = []
+
+        for j in range(n_dice):
+            roll = random.randint(1, n_sides)
+            rolls.append(roll)
+
+        results.append(max(rolls))
+
+    return sum(results) / len(results)
