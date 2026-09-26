@@ -17,7 +17,7 @@ st.caption("Ten source-linked problems per set · 60 seconds each · Enter to su
 
 
 def display_choice(value):
-    """Render numeric options as math without changing their scoring values."""
+    """Use compact inline math so radio choices keep comfortable spacing."""
     if value is None:
         return "Time expired"
     try:
@@ -26,7 +26,7 @@ def display_choice(value):
         return str(value).replace("$", r"\$")
     if number.denominator == 1:
         return f"${number.numerator}$"
-    return rf"$\frac{{{number.numerator}}}{{{number.denominator}}}$"
+    return f"${number.numerator}/{number.denominator}$"
 
 
 def results_csv(results):
