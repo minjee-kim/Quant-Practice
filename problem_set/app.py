@@ -12,7 +12,7 @@ from engine import SECONDS_PER_QUESTION, advance, new_quiz, submit
 
 st.set_page_config(page_title="Quant Practice | Problem Set", page_icon="🧠")
 st.title("Quant Practice · Problem Set")
-st.caption("Ten published-guide problem types per set · 60 seconds each · Enter to submit")
+st.caption("Ten source-linked problems per set · 60 seconds each · Enter to submit")
 
 
 def results_csv(results):
@@ -99,12 +99,33 @@ def drill():
 
 
 if "quiz" not in st.session_state:
-    st.write("Practice published probability, expected-value, decision, and market problems. "
-             "Each set draws ten distinct types from eleven templates, with new numbers and choices.")
-    st.caption("These are adapted from Jane Street's public interview-preparation guide; "
-               "they are not verified transcripts of live interviews.")
+    st.write("Practice probability, expected-value, data interpretation, decision, "
+             "and market problems. Each set draws ten distinct types from thirteen "
+             "templates, with new numbers and choices.")
+    st.caption("The exercises adapt published Jane Street and Susquehanna examples. "
+               "They are not verified transcripts of live interviews.")
     if st.button("Start 10-question set", type="primary"):
         st.session_state.quiz = new_quiz()
         st.rerun()
 else:
     drill()
+
+with st.expander("Official interview guides and further practice"):
+    st.markdown(
+        "**Published exercises used in this quiz**\n\n"
+        "- [Jane Street — Probability & Markets](https://www.janestreet.com/static/pdfs/trading-interview.pdf): "
+        "probability, expected value, and markets.\n"
+        "- [Susquehanna — Game Theory + Decision Science](https://sig.com/who-we-are/game-theory-decision-science/): "
+        "conditional rates and independent coin flips.\n\n"
+        "**Firm interview guidance** (these pages do not provide the quiz questions)\n\n"
+        "- [Citadel — Quantitative Research Interview Process](https://www.citadel.com/careers/career-perspectives/our-quantitative-research-interview-process/): "
+        "programming, research, algorithms, and explaining your approach.\n"
+        "- [Citadel — Quantitative Research FAQs](https://www.citadel.com/careers/career-perspectives/candidate-faqs-quantitative-research/): "
+        "statistics, coding, predictive models, and working with data.\n"
+        "- [Two Sigma — Interviewing for Quantitative Research & Modeling](https://www.twosigma.com/interviewing-for-quantitative-research-modeling/): "
+        "data analysis, coding, statistics, and a mock interview video.\n"
+        "- [Optiver — Quant Research internship story](https://www.optiver.com/join-us/stories/from-computer-science-to-quant-research-lucys-internship-story/): "
+        "an account of an open-ended, data-based interview project.\n"
+        "- [IMC — How to prepare for an interview](https://www.imc.com/ap/articles/how-to-prepare-for-an-interview-at-imc): "
+        "technical problem solving with an interviewer."
+    )

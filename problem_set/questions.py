@@ -1,7 +1,7 @@
-"""Parameterized variants of published Jane Street interview-preparation problems.
+"""Parameterized variants of published firm-authored practice examples.
 
-Source: Jane Street, Probability & Markets (official trading/research guide).
-These are adaptations for multiple-choice practice, not claims about live interviews.
+Sources: Jane Street's Probability & Markets guide and Susquehanna's decision
+science examples. These are adaptations, not claims about live interviews.
 """
 
 import math
@@ -9,6 +9,10 @@ import random
 from fractions import Fraction
 
 GUIDE_URL = "https://www.janestreet.com/static/pdfs/trading-interview.pdf"
+SIG_SOURCE = (
+    "Susquehanna, Game Theory + Decision Science",
+    "https://sig.com/who-we-are/game-theory-decision-science/",
+)
 
 
 def choices(answer, wrong, rng):
@@ -25,9 +29,13 @@ def choices(answer, wrong, rng):
     return options
 
 
-def problem(topic, kind, prompt, answer, wrong, solution, page, rng):
-    """Package a problem with its official guide page and worked answer."""
+def problem(topic, kind, prompt, answer, wrong, solution, page, rng, source=None):
+    """Package a problem with its published source and worked answer."""
     answer = str(answer)
+    source_name, source_url = source or (
+        f"Jane Street, Probability & Markets, p. {page}",
+        f"{GUIDE_URL}#page={page + 1}",
+    )
     return {
         "topic": topic,
         "kind": kind,
@@ -35,8 +43,8 @@ def problem(topic, kind, prompt, answer, wrong, solution, page, rng):
         "answer": answer,
         "choices": choices(answer, [str(value) for value in wrong], rng),
         "solution": solution,
-        "source_name": f"Jane Street, Probability & Markets, p. {page}",
-        "source_url": f"{GUIDE_URL}#page={page + 1}",
+        "source_name": source_name,
+        "source_url": source_url,
     }
 
 
@@ -246,17 +254,64 @@ def conditional_prime(rng):
     )
 
 
-GENERATORS = [
+def pain_and_rain(rng):
+    """Compare conditional rates, adapting Susquehanna's correlation example."""
+    rainy_pain, rainy_no_pain, dry_pain, dry_no_pain = rng.choice([
+        (14, 7, 6, 2),   # More rainy pain counts, but a lower rainy rate.
+        (9, 3, 8, 8),    # Higher rainy rate.
+        (8, 8, 3, 3),    # Same rate.
+        (4, 8, 9, 9),    # Lower rainy rate.
+    ])
+    rainy_scale = rng.randint(1, 3)
+    dry_scale = rng.randint(1, 3)
+    rainy_pain *= rainy_scale
+    rainy_no_pain *= rainy_scale
+    dry_pain *= dry_scale
+    dry_no_pain *= dry_scale
+    rainy_rate = Fraction(rainy_pain, rainy_pain + rainy_no_pain)
+    dry_rate = Fraction(dry_pain, dry_pain + dry_no_pain)
+    answer = ("Rainy days" if rainy_rate > dry_rate else
+              "Dry days" if dry_rate > rainy_rate else "Equal in both")
+    return problem(
+        "Data interpretation", "Pain and rain",
+        f"In {rainy_pain + rainy_no_pain} rainy observations, {rainy_pain} "
+        f"report pain. In {dry_pain + dry_no_pain} dry observations, "
+        f"{dry_pain} report pain. Which group has the higher pain rate?",
+        answer, ["Rainy days", "Dry days", "Equal in both", "Cannot tell"],
+        f"Compare rates within each group: rainy {rainy_pain}/"
+        f"{rainy_pain + rainy_no_pain} = {rainy_rate}; dry {dry_pain}/"
+        f"{dry_pain + dry_no_pain} = {dry_rate}. Answer: {answer}.",
+        None, rng, source=SIG_SOURCE,
+    )
+
+
+def coin_streak_next_flip(rng):
+    streak = rng.randint(3, 10)
+    return problem(
+        "Independence", "After a heads streak",
+        f"A fair coin has just landed heads {streak} times in a row. "
+        "What is P(heads on the next flip)?",
+        Fraction(1, 2), [Fraction(0), Fraction(1, 4), Fraction(3, 4)],
+        "Fair coin flips are independent. A previous streak does not change "
+        "the next flip's chance of heads: 1/2.",
+        None, rng, source=SIG_SOURCE,
+    )
+
+
+JANE_STREET_GENERATORS = [
     dice_sum, card_draws, odd_product, weighted_die, conditional_die_mean,
     conditional_coins, max_dice, optimal_reroll, heads_in_row, die_contract,
     conditional_prime,
 ]
+SIG_GENERATORS = [pain_and_rain, coin_streak_next_flip]
+GENERATORS = JANE_STREET_GENERATORS + SIG_GENERATORS
 
 
 def make_questions(rng=None):
-    """One instance of ten randomly selected, distinct published problem types."""
+    """Ten distinct types, including both Susquehanna examples each round."""
     rng = rng or random.Random()
-    generators = rng.sample(GENERATORS, k=10)
+    generators = rng.sample(JANE_STREET_GENERATORS, k=8) + SIG_GENERATORS[:]
+    rng.shuffle(generators)
     questions = [generator(rng) for generator in generators]
     if len({q["prompt"] for q in questions}) != 10:
         raise RuntimeError("Duplicate question prompts")
