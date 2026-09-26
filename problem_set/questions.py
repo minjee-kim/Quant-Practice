@@ -21,11 +21,15 @@ def choices(answer, wrong, rng):
 def percentage(rng):
     p = rng.choice([5, 10, 15, 20, 25, 30, 35, 40])
     n = rng.choice([40, 80, 120, 160, 200, 240, 400])
-    answer = str(p * n // 100)
+    value = p * n // 100
+    answer = str(value)
+    step = max(1, value // 4)
+    wrong = [str(x) for x in (value-step, value+step, value-2*step,
+                               value+2*step, value+3*step) if x > 0]
     return {
         "topic": "Mental math", "kind": "Percentages",
         "prompt": f"What is {p}% of {n}?", "answer": answer,
-        "choices": choices(answer, [str((p + d) * n // 100) for d in (5, 10, 15, 20)], rng),
+        "choices": choices(answer, wrong, rng),
         "solution": f"({p}/100) × {n} = {answer}.",
     }
 
