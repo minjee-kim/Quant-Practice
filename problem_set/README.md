@@ -2,7 +2,8 @@
 
 A Streamlit webpage for timed quant interview practice. Each attempt draws ten
 different problem types from thirteen templates, with fresh numbers, four choices,
-60 seconds per question, answer feedback, and a solution review.
+60 seconds per question, answer feedback, and a solution review. Fractions,
+conditional probabilities, and expected values render as math in the app.
 
 Eleven templates adapt published problems in Jane Street's
 [Probability & Markets guide](https://www.janestreet.com/static/pdfs/trading-interview.pdf).
@@ -11,6 +12,8 @@ Two adapt examples on Susquehanna's
 Every set includes both Susquehanna examples and eight Jane Street types. These
 randomized questions are practice adaptations, **not verified accounts of live
 interview questions**. Each app question links to its published source.
+If a browser still has a round from the older question bank, the app resets that
+round with a notice because its questions lack source information.
 
 | Problem type | Guide page |
 | --- | ---: |

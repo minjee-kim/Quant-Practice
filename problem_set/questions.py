@@ -29,6 +29,13 @@ def choices(answer, wrong, rng):
     return options
 
 
+def tex(value):
+    """A compact LaTeX integer or exact fraction for displayed math."""
+    value = Fraction(value)
+    return (str(value.numerator) if value.denominator == 1 else
+            rf"\frac{{{value.numerator}}}{{{value.denominator}}}")
+
+
 def problem(topic, kind, prompt, answer, wrong, solution, page, rng, source=None):
     """Package a problem with its published source and worked answer."""
     answer = str(answer)
@@ -54,11 +61,13 @@ def dice_sum(rng):
     value = Fraction(count, 36)
     return problem(
         "Counting", "Two dice: sum",
-        f"A red die and a blue die are rolled. What is P(their sum is {target})?",
+        f"Roll a fair **red** die and a fair **blue** die. "
+        f"What is $P(R+B={target})$, where $R$ and $B$ are their faces?",
         value, [Fraction(1, 11), Fraction(count - 1, 36),
                 Fraction(count + 1, 36), Fraction(max(1, count - 2), 36)],
-        f"The dice are distinct, giving 36 ordered outcomes. {count} pairs sum to "
-        f"{target}, so P = {count}/36 = {value}.",
+        f"The dice are distinct, giving $6\\times6=36$ ordered outcomes. "
+        f"{count} pairs sum to {target}, so "
+        f"$P(R+B={target})=\\frac{{{count}}}{{36}}={tex(value)}$.",
         2, rng,
     )
 
@@ -75,15 +84,16 @@ def card_draws(rng):
     condition = "replacing the first card" if replace else "without replacing the first card"
     return problem(
         "Probability", "Card draws",
-        f"Draw two cards from a standard 52-card deck, {condition}. "
-        f"What is P(both are {label})?",
+        f"Draw two cards from a standard 52-card deck, **{condition}**. "
+        f"What is $P(\\text{{both are {label}}})$?",
         value, [without_replacement if replace else with_replacement,
                 first, Fraction(count - 1, 51),
                 first * Fraction(count - 1, 52), first * Fraction(count, 51)],
-        f"The first success has probability {count}/52. "
-        + (f"Replacement leaves {count}/52 for the second draw."
-           if replace else f"Without replacement, the second chance is {count - 1}/51.")
-        + f" Multiply to get {value}.",
+        f"The first draw succeeds with probability $\\frac{{{count}}}{{52}}$. "
+        + (f"With replacement, the second chance is $\\frac{{{count}}}{{52}}$."
+           if replace else
+           f"Without replacement, it is $\\frac{{{count - 1}}}{{51}}$.")
+        + f" Multiply: $P={tex(value)}$.",
         4, rng,
     )
 
@@ -93,11 +103,12 @@ def odd_product(rng):
     value = Fraction(1, 2) ** rolls
     return problem(
         "Independence", "Odd die product",
-        f"Roll a fair six-sided die {rolls} times. What is P(the product is odd)?",
+        f"Roll a fair six-sided die {rolls} times. "
+        "What is $P(\\text{the product is odd})$?",
         value, [Fraction(1, 2) ** (rolls - 1), Fraction(1, 2) ** (rolls + 1),
                 Fraction(1, 3) ** rolls, Fraction(1, 2)],
         f"The product is odd only when all {rolls} rolls are odd. "
-        f"Independence gives (3/6)^{rolls} = {value}.",
+        f"Independence gives $P=(\\frac{{3}}{{6}})^{{{rolls}}}={tex(value)}$.",
         4, rng,
     )
 
@@ -109,12 +120,15 @@ def weighted_die(rng):
     value = heavy * sides + (1 - heavy) * other_mean
     return problem(
         "Expected value", "Weighted die",
-        f"A {sides}-sided die lands on {sides} with probability {heavy}; "
-        "the other faces are equally likely. What is E[X]?",
+        f"A {sides}-sided die lands on {sides} with probability "
+        f"${tex(heavy)}$; the other faces are equally likely. "
+        "What is $E[X]$?",
         value, [Fraction(sides + 1, 2), heavy * sides, other_mean,
                 value - Fraction(1, 2), value + Fraction(1, 2)],
-        f"The other faces 1 through {sides - 1} average {other_mean}. "
-        f"Thus E[X] = ({heavy})({sides}) + (1 - {heavy})({other_mean}) = {value}.",
+        f"The other faces $1,\\ldots,{sides - 1}$ average "
+        f"${tex(other_mean)}$. Thus "
+        f"$E[X]={tex(heavy)}({sides})+"
+        f"{tex(1 - heavy)}({tex(other_mean)})={tex(value)}$.",
         5, rng,
     )
 
@@ -125,12 +139,14 @@ def conditional_die_mean(rng):
     value = Fraction(minimum + sides, 2)
     return problem(
         "Conditional expectation", "Die above a threshold",
-        f"X is a fair {sides}-sided die roll. What is E[X | X is at least {minimum}]?",
+        f"$X$ is a fair {sides}-sided die roll. "
+        f"What is $E[X\\mid X\\ge {minimum}]$?",
         value, [Fraction(sides + 1, 2), minimum, sides,
                 Fraction(minimum + sides - 1, 2),
                 Fraction(minimum + sides + 1, 2)],
-        f"Given the condition, {minimum}, {minimum + 1}, ..., {sides} are "
-        f"equally likely. Their mean is ({minimum} + {sides})/2 = {value}.",
+        f"Given the condition, ${minimum},{minimum + 1},\\ldots,{sides}$ "
+        f"are equally likely. Their mean is "
+        f"$\\frac{{{minimum}+{sides}}}{{2}}={tex(value)}$.",
         7, rng,
     )
 
@@ -142,15 +158,18 @@ def conditional_coins(rng):
     value = Fraction(ways, 2 ** flips - 1)
     return problem(
         "Conditional probability", "Heads given a tail",
-        f"Flip {flips} fair coins. Given at least one tail, what is "
-        f"P(exactly {heads} heads)?",
+        # Use the singular form when the target count is one.
+        f"Flip {flips} fair coins. Given **at least one tail**, what is "
+        f"$P(\\text{{exactly {heads} {'head' if heads == 1 else 'heads'}}}"
+        f"\\mid\\text{{at least one tail}})$?",
         value, [Fraction(ways, 2 ** flips),
                 Fraction(ways, 2 ** flips - 2),
                 Fraction(ways - 1, 2 ** flips - 1),
                 1 - value, Fraction(heads, flips)],
-        f"Of the 2^{flips} equally likely sequences, exclude all heads. "
-        f"Exactly {heads} heads occurs in C({flips},{heads}) = {ways} "
-        f"sequences, so P = {ways}/(2^{flips} - 1) = {value}.",
+        f"Exclude the all-heads sequence from the $2^{{{flips}}}$ possibilities. "
+        f"Exactly {heads} {'head' if heads == 1 else 'heads'} occurs in "
+        f"$\\binom{{{flips}}}{{{heads}}}={ways}$ "
+        f"sequences, so $P=\\frac{{{ways}}}{{2^{{{flips}}}-1}}={tex(value)}$.",
         7, rng,
     )
 
@@ -163,11 +182,12 @@ def max_dice(rng):
     return problem(
         "Expected value", "Maximum of dice",
         f"Roll {rolls} independent fair {sides}-sided dice. "
-        "What is the expected maximum?",
+        f"What is $E[\\max(X_1,\\ldots,X_{rolls})]$?",
         value, [Fraction(sides + 1, 2), value - Fraction(1, 2),
                 value + Fraction(1, 2), sides, value - 1],
-        f"For M = max, P(M > j) = 1 - (j/{sides})^{rolls}. "
-        f"Sum this over j = 0,...,{sides - 1} to get E[M] = {value}.",
+        f"For $M=\\max(X_1,\\ldots,X_{rolls})$, "
+        f"$P(M>j)=1-(j/{sides})^{{{rolls}}}$. "
+        f"Sum over $j=0,\\ldots,{sides - 1}$ to get $E[M]={tex(value)}$.",
         10, rng,
     )
 
@@ -180,13 +200,14 @@ def optimal_reroll(rng):
     return problem(
         "Decision making", "One optional reroll",
         f"Roll a fair {sides}-sided die. After seeing it, you may keep it or "
-        "reroll once and must accept the second result. What is your optimal "
-        "expected final value?",
+        "reroll **once** and must accept the second result. "
+        "What is your **optimal expected final value**?",
         value, [new_roll_mean, value - Fraction(1, 2),
                 value + Fraction(1, 2), value + Fraction(1, 4), sides],
-        f"A fresh roll averages {new_roll_mean}; reroll a first result below "
-        f"that and keep one above it. Average max(x, {new_roll_mean}) "
-        f"over x = 1,...,{sides}: {value}.",
+        f"A fresh roll averages ${tex(new_roll_mean)}$. Reroll a first "
+        f"result below that and keep one above it. "
+        f"$E[\\text{{final value}}]=\\frac{{1}}{{{sides}}}"
+        f"\\sum_{{x=1}}^{{{sides}}}\\max(x,{tex(new_roll_mean)})={tex(value)}$.",
         10, rng,
     )
 
@@ -197,11 +218,11 @@ def heads_in_row(rng):
     return problem(
         "Stopping times", "Consecutive heads",
         f"Flip a fair coin until you get {streak} heads in a row. "
-        "How many flips do you expect?",
+        "What is the **expected number of flips**?",
         value, [2 ** streak, 2 ** (streak + 1),
                 2 ** (streak + 1) - 1, 2 ** streak + 2],
-        f"A run-length recursion gives E_1 = 2 and E_j = 2E_(j-1) + 2. "
-        f"Therefore E_{streak} = 2^({streak + 1}) - 2 = {value}.",
+        f"A run-length recursion gives $E_1=2$ and $E_j=2E_{{j-1}}+2$. "
+        f"Therefore $E_{{{streak}}}=2^{{{streak + 1}}}-2={value}$.",
         11, rng,
     )
 
@@ -218,12 +239,13 @@ def die_contract(rng):
     value = fair_value - cost
     return problem(
         "Markets", "Die contract value",
-        f"A contract pays ${multiplier} times the face of a fair {sides}-sided "
-        f"die. You buy it for ${cost}. What is your expected profit?",
+        f"Let $X$ be a fair {sides}-sided die roll. A contract pays "
+        f"**{multiplier} dollars per point** and costs **{cost} dollars**. "
+        f"What is the expected profit $E[{multiplier}X-{cost}]$ in dollars?",
         money(value), [money(value + d) for d in (-4, -2, 2, 4)],
-        f"The average face is ({sides} + 1)/2. Expected payout is "
-        f"${fair_value}, so expected profit is ${fair_value} - ${cost} = "
-        f"{money(value)}.",
+        f"The average face is $E[X]=\\frac{{{sides}+1}}{{2}}$. "
+        f"Expected payout is {fair_value} dollars, so "
+        f"$E[{multiplier}X-{cost}]={fair_value}-{cost}={value}$ dollars.",
         9, rng,
     )
 
@@ -244,12 +266,13 @@ def conditional_prime(rng):
     wrong = [x for x in wrong if 0 <= x <= 1]
     return problem(
         "Conditional probability", "Prime die result",
-        f"X is a fair {sides}-sided die roll. Given X is prime, "
-        f"what is P(X is at most {threshold})?",
+        f"$X$ is a fair {sides}-sided die roll. Given that $X$ is prime, "
+        f"what is $P(X\\le {threshold}\\mid X\\text{{ is prime}})$?",
         value, wrong,
         f"The prime faces are {', '.join(map(str, primes))}. "
         f"{count} of these {total} faces are at most {threshold}, "
-        f"so the conditional probability is {value}.",
+        f"so the conditional probability is $\\frac{{{count}}}{{{total}}}="
+        f"{tex(value)}$.",
         8, rng,
     )
 
@@ -274,13 +297,19 @@ def pain_and_rain(rng):
               "Dry days" if dry_rate > rainy_rate else "Equal in both")
     return problem(
         "Data interpretation", "Pain and rain",
-        f"In {rainy_pain + rainy_no_pain} rainy observations, {rainy_pain} "
-        f"report pain. In {dry_pain + dry_no_pain} dry observations, "
-        f"{dry_pain} report pain. Which group has the higher pain rate?",
+        "Which group has the **higher rate of pain**?\n\n"
+        "| Weather | Pain | No pain |\n"
+        "|:---|---:|---:|\n"
+        f"| Rainy | {rainy_pain} | {rainy_no_pain} |\n"
+        f"| Dry | {dry_pain} | {dry_no_pain} |",
         answer, ["Rainy days", "Dry days", "Equal in both", "Cannot tell"],
-        f"Compare rates within each group: rainy {rainy_pain}/"
-        f"{rainy_pain + rainy_no_pain} = {rainy_rate}; dry {dry_pain}/"
-        f"{dry_pain + dry_no_pain} = {dry_rate}. Answer: {answer}.",
+        f"Compare rates **within** each group: "
+        f"$P(\\text{{pain}}\\mid\\text{{rain}})="
+        f"\\frac{{{rainy_pain}}}{{{rainy_pain + rainy_no_pain}}}="
+        f"{tex(rainy_rate)}$; "
+        f"$P(\\text{{pain}}\\mid\\text{{dry}})="
+        f"\\frac{{{dry_pain}}}{{{dry_pain + dry_no_pain}}}="
+        f"{tex(dry_rate)}$. Answer: **{answer}**.",
         None, rng, source=SIG_SOURCE,
     )
 
@@ -290,10 +319,10 @@ def coin_streak_next_flip(rng):
     return problem(
         "Independence", "After a heads streak",
         f"A fair coin has just landed heads {streak} times in a row. "
-        "What is P(heads on the next flip)?",
+        "What is $P(\\text{heads on the next flip})$?",
         Fraction(1, 2), [Fraction(0), Fraction(1, 4), Fraction(3, 4)],
         "Fair coin flips are independent. A previous streak does not change "
-        "the next flip's chance of heads: 1/2.",
+        "the next flip's chance of heads: $P=\\frac{1}{2}$.",
         None, rng, source=SIG_SOURCE,
     )
 

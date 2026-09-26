@@ -4,15 +4,29 @@ import csv
 import io
 import math
 import time
+from fractions import Fraction
 
 import streamlit as st
 
-from engine import SECONDS_PER_QUESTION, advance, new_quiz, submit
+from engine import SECONDS_PER_QUESTION, advance, compatible_quiz, new_quiz, submit
 
 
 st.set_page_config(page_title="Quant Practice | Problem Set", page_icon="🧠")
 st.title("Quant Practice · Problem Set")
 st.caption("Ten source-linked problems per set · 60 seconds each · Enter to submit")
+
+
+def display_choice(value):
+    """Render numeric options as math without changing their scoring values."""
+    if value is None:
+        return "Time expired"
+    try:
+        number = Fraction(value)
+    except (ValueError, TypeError, ZeroDivisionError):
+        return str(value).replace("$", r"\$")
+    if number.denominator == 1:
+        return f"${number.numerator}$"
+    return rf"$\frac{{{number.numerator}}}{{{number.denominator}}}$"
 
 
 def results_csv(results):
@@ -48,10 +62,10 @@ def drill():
         for result in results:
             marker = "✓" if result["correct"] else "✗"
             with st.expander(f"{marker} Question {result['number']}: {result['kind']}"):
-                st.write(result["prompt"])
-                st.write(f"Your answer: {result['selected'] or 'Time expired'}")
-                st.write(f"Correct answer: {result['answer']}")
-                st.write(result["solution"])
+                st.markdown(result["prompt"])
+                st.markdown(f"Your answer: {display_choice(result['selected'])}")
+                st.markdown(f"Correct answer: {display_choice(result['answer'])}")
+                st.markdown(result["solution"])
                 st.markdown(f"Source: [{result['source_name']}]({result['source_url']})")
         st.download_button("Download results as CSV", data=results_csv(results),
                            file_name="quant_practice_results.csv", mime="text/csv")
@@ -65,13 +79,15 @@ def drill():
     st.progress((index + 1) / len(quiz["questions"]),
                 text=f"Question {index + 1} of {len(quiz['questions'])}")
     st.caption(f"{question['topic']} · {question['kind']}")
-    st.subheader(question["prompt"])
+    st.subheader("Question")
+    st.markdown(question["prompt"])
     st.caption(f"Adapted from [{question['source_name']}]({question['source_url']}).")
 
     if quiz["phase"] == "question":
         seconds_left = max(0, math.ceil(SECONDS_PER_QUESTION - (now - quiz["started_at"])))
         st.metric("Time remaining", f"0:{seconds_left:02d}")
         selected = st.radio("Choose one answer", question["choices"],
+                            format_func=display_choice,
                             index=None, key=f"choice_{index}")
         if st.button("Submit answer", type="primary", disabled=selected is None,
                      shortcut="Enter"):
@@ -81,11 +97,11 @@ def drill():
         result = quiz["results"][-1]
         for option in question["choices"]:
             if option == question["answer"]:
-                st.success(f"✓ {option}")
+                st.success(f"✓ {display_choice(option)}")
             elif option == result["selected"]:
-                st.error(f"✗ {option}")
+                st.error(f"✗ {display_choice(option)}")
             else:
-                st.write(f"○ {option}")
+                st.markdown(f"○ {display_choice(option)}")
         if result["timed_out"]:
             st.warning("Time expired.")
         elif result["correct"]:
@@ -97,6 +113,13 @@ def drill():
             advance(quiz, time.monotonic())
             st.rerun()
 
+
+if "quiz" in st.session_state and not compatible_quiz(st.session_state.quiz):
+    del st.session_state.quiz
+    for key in list(st.session_state):
+        if key.startswith("choice_"):
+            del st.session_state[key]
+    st.info("The question bank changed, so your saved round was reset. Start a new set below.")
 
 if "quiz" not in st.session_state:
     st.write("Practice probability, expected-value, data interpretation, decision, "

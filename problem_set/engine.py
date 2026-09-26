@@ -9,6 +9,31 @@ SECONDS_PER_QUESTION = 60
 FEEDBACK_SECONDS = 2.5
 
 
+def compatible_quiz(quiz):
+    """Reject saved rounds from the earlier, unsourced question bank."""
+    if not isinstance(quiz, dict):
+        return False
+    questions = quiz.get("questions")
+    results = quiz.get("results")
+    phase = quiz.get("phase")
+    index = quiz.get("index")
+    if (not isinstance(questions, list) or not questions
+            or not isinstance(results, list)
+            or phase not in {"question", "feedback", "finished"}
+            or not isinstance(index, int)
+            or not 0 <= index <= len(questions)):
+        return False
+    question_fields = {"topic", "kind", "prompt", "answer", "choices",
+                       "solution", "source_name", "source_url"}
+    result_fields = {"number", "topic", "kind", "prompt", "selected",
+                     "answer", "correct", "timed_out", "seconds", "solution",
+                     "source_name", "source_url"}
+    return (all(isinstance(q, dict) and question_fields <= q.keys()
+                for q in questions)
+            and all(isinstance(r, dict) and result_fields <= r.keys()
+                    for r in results))
+
+
 def new_quiz(now=None):
     return {
         "questions": make_questions(),
