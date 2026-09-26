@@ -39,6 +39,8 @@ def submit(quiz, selected, now=None):
         "timed_out": timed_out,
         "seconds": round(min(elapsed, SECONDS_PER_QUESTION), 1),
         "solution": question["solution"],
+        "source_name": question["source_name"],
+        "source_url": question["source_url"],
     }
     quiz["results"].append(result)
     quiz["phase"] = "feedback"

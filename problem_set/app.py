@@ -12,13 +12,14 @@ from engine import SECONDS_PER_QUESTION, advance, new_quiz, submit
 
 st.set_page_config(page_title="Quant Practice | Problem Set", page_icon="🧠")
 st.title("Quant Practice · Problem Set")
-st.caption("Ten randomized questions · 60 seconds each · Enter to submit")
+st.caption("Ten published-guide problem types per set · 60 seconds each · Enter to submit")
 
 
 def results_csv(results):
     output = io.StringIO()
     fields = ["number", "topic", "kind", "prompt", "selected", "answer",
-              "correct", "timed_out", "seconds", "solution"]
+              "correct", "timed_out", "seconds", "solution",
+              "source_name", "source_url"]
     writer = csv.DictWriter(output, fieldnames=fields)
     writer.writeheader()
     writer.writerows(results)
@@ -51,6 +52,7 @@ def drill():
                 st.write(f"Your answer: {result['selected'] or 'Time expired'}")
                 st.write(f"Correct answer: {result['answer']}")
                 st.write(result["solution"])
+                st.markdown(f"Source: [{result['source_name']}]({result['source_url']})")
         st.download_button("Download results as CSV", data=results_csv(results),
                            file_name="quant_practice_results.csv", mime="text/csv")
         if st.button("Try another set"):
@@ -64,6 +66,7 @@ def drill():
                 text=f"Question {index + 1} of {len(quiz['questions'])}")
     st.caption(f"{question['topic']} · {question['kind']}")
     st.subheader(question["prompt"])
+    st.caption(f"Adapted from [{question['source_name']}]({question['source_url']}).")
 
     if quiz["phase"] == "question":
         seconds_left = max(0, math.ceil(SECONDS_PER_QUESTION - (now - quiz["started_at"])))
@@ -96,8 +99,10 @@ def drill():
 
 
 if "quiz" not in st.session_state:
-    st.write("Practice mental math, probability, expected value, combinatorics, and Bayes' rule.")
-    st.write("Each set has two questions from each topic. Numbers and choices change every time.")
+    st.write("Practice published probability, expected-value, decision, and market problems. "
+             "Each set draws ten distinct types from eleven templates, with new numbers and choices.")
+    st.caption("These are adapted from Jane Street's public interview-preparation guide; "
+               "they are not verified transcripts of live interviews.")
     if st.button("Start 10-question set", type="primary"):
         st.session_state.quiz = new_quiz()
         st.rerun()
