@@ -327,21 +327,184 @@ def coin_streak_next_flip(rng):
     )
 
 
-JANE_STREET_GENERATORS = [
-    dice_sum, card_draws, odd_product, weighted_die, conditional_die_mean,
-    conditional_coins, max_dice, optimal_reroll, heads_in_row, die_contract,
-    conditional_prime,
+def binomial_heads(rng):
+    flips = rng.randint(4, 7)
+    heads = rng.randint(1, flips - 1)
+    ways = math.comb(flips, heads)
+    value = Fraction(ways, 2 ** flips)
+    return problem(
+        "Binomial", "Number of heads",
+        f"Flip {flips} independent fair coins. If $H$ is the number of heads, "
+        f"what is $P(H={heads})$?",
+        value, [Fraction(ways - 1, 2 ** flips),
+                Fraction(ways + 1, 2 ** flips),
+                Fraction(1, 2 ** flips), Fraction(heads, flips)],
+        f"Choose which {heads} positions are heads. Each sequence has "
+        f"probability $2^{{-{flips}}}$, so "
+        f"$P(H={heads})=\\binom{{{flips}}}{{{heads}}}2^{{-{flips}}}"
+        f"={tex(value)}$.",
+        4, rng,
+    )
+
+
+def first_head_distribution(rng):
+    flip = rng.randint(2, 8)
+    value = Fraction(1, 2) ** flip
+    return problem(
+        "Geometric", "First head",
+        f"Flip a fair coin until the first head. What is the probability "
+        f"the first head occurs on flip ${flip}$?",
+        value, [Fraction(1, 2) ** (flip - 1),
+                Fraction(1, 2) ** (flip + 1), 1 - value,
+                Fraction(flip, 2 ** flip)],
+        f"The sequence must have {flip - 1} tails followed by one head. "
+        f"By independence, $P(N={flip})=(\\frac{{1}}{{2}})^{{{flip}}}"
+        f"={tex(value)}$.",
+        11, rng,
+    )
+
+
+def dice_sum_cdf(rng):
+    cutoff = rng.randint(4, 10)
+    count = sum(a + b <= cutoff for a in range(1, 7)
+                for b in range(1, 7))
+    value = Fraction(count, 36)
+    equal_count = sum(a + b == cutoff for a in range(1, 7)
+                      for b in range(1, 7))
+    return problem(
+        "Discrete distribution", "Sum of dice: CDF",
+        f"Roll two distinct fair six-sided dice and let $S$ be their sum. "
+        f"What is $P(S\\le {cutoff})$?",
+        value, [Fraction(equal_count, 36), Fraction(count - 1, 36),
+                Fraction(count + 1, 36), 1 - value],
+        f"Count all ordered pairs whose sum is at most {cutoff}. "
+        f"There are {count} out of 36, so "
+        f"$P(S\\le {cutoff})=\\frac{{{count}}}{{36}}={tex(value)}$.",
+        4, rng,
+    )
+
+
+def transformed_die_cdf(rng):
+    sides = rng.choice([4, 6, 8])
+    offset = rng.choice([1, 3])
+    cutoff_face = rng.randint(1, sides - 1)
+    threshold = 2 * cutoff_face + offset
+    value = Fraction(cutoff_face, sides)
+    return problem(
+        "Transformation", "Transformed die",
+        f"Let $X$ be uniform on $\\{{1,\\ldots,{sides}\\}}$ and "
+        f"$Y=2X+{offset}$. What is $P(Y\\le {threshold})$?",
+        value, [Fraction(cutoff_face + 1, sides),
+                Fraction(cutoff_face, sides + 1),
+                Fraction(cutoff_face - 1, sides), 1 - value],
+        f"$Y\\le {threshold}$ exactly when $X\\le {cutoff_face}$. "
+        f"{cutoff_face} of the {sides} equally likely faces qualify, "
+        f"so $P(Y\\le {threshold})={tex(value)}$.",
+        5, rng,
+    )
+
+
+def max_dice_cdf(rng):
+    sides = rng.choice([4, 6, 8])
+    rolls = rng.choice([2, 3])
+    cutoff = rng.randint(2, sides - 1)
+    base = Fraction(cutoff, sides)
+    value = base ** rolls
+    return problem(
+        "Order statistics", "Maximum: CDF",
+        f"Roll {rolls} independent fair {sides}-sided dice. If $M$ is the "
+        f"maximum, what is $P(M\\le {cutoff})$?",
+        value, [base, 1 - value, Fraction(cutoff - 1, sides) ** rolls,
+                value + Fraction(1, sides ** rolls)],
+        f"All {rolls} rolls must be at most {cutoff}, independently. "
+        f"Thus $P(M\\le {cutoff})="
+        f"(\\frac{{{cutoff}}}{{{sides}}})^{{{rolls}}}={tex(value)}$.",
+        10, rng,
+    )
+
+
+def max_dice_pmf(rng):
+    sides = rng.choice([4, 6, 8])
+    rolls = rng.choice([2, 3])
+    face = rng.randint(2, sides - 1)
+    cdf_at_face = Fraction(face, sides) ** rolls
+    cdf_below = Fraction(face - 1, sides) ** rolls
+    value = cdf_at_face - cdf_below
+    return problem(
+        "Order statistics", "Maximum: PMF",
+        f"Roll {rolls} independent fair {sides}-sided dice. If $M$ is the "
+        f"maximum, what is $P(M={face})$?",
+        value, [cdf_at_face, cdf_below, Fraction(1, sides),
+                value + Fraction(1, sides ** rolls),
+                value - Fraction(1, sides ** rolls)],
+        f"Subtract consecutive CDF values: "
+        f"$P(M={face})=P(M\\le {face})-P(M\\le {face - 1})="
+        f"(\\frac{{{face}}}{{{sides}}})^{{{rolls}}}-"
+        f"(\\frac{{{face - 1}}}{{{sides}}})^{{{rolls}}}={tex(value)}$.",
+        10, rng,
+    )
+
+
+# Levels are our practice estimates, not firm-supplied interview ratings.
+LEVEL_SECONDS = {"Level 1": 60, "Level 2": 120, "Level 3": 180}
+CATEGORIES = ("Probability", "Distributions", "Expected value", "Markets & data")
+TEMPLATES = [
+    (dice_sum, "Probability", "Level 1"),
+    (odd_product, "Probability", "Level 1"),
+    (coin_streak_next_flip, "Probability", "Level 1"),
+    (card_draws, "Probability", "Level 2"),
+    (conditional_coins, "Probability", "Level 2"),
+    (conditional_prime, "Probability", "Level 3"),
+    (binomial_heads, "Distributions", "Level 1"),
+    (first_head_distribution, "Distributions", "Level 1"),
+    (transformed_die_cdf, "Distributions", "Level 2"),
+    (dice_sum_cdf, "Distributions", "Level 2"),
+    (max_dice_cdf, "Distributions", "Level 2"),
+    (max_dice_pmf, "Distributions", "Level 3"),
+    (weighted_die, "Expected value", "Level 1"),
+    (conditional_die_mean, "Expected value", "Level 2"),
+    (max_dice, "Expected value", "Level 2"),
+    (optimal_reroll, "Expected value", "Level 3"),
+    (heads_in_row, "Expected value", "Level 3"),
+    (die_contract, "Markets & data", "Level 1"),
+    (pain_and_rain, "Markets & data", "Level 2"),
 ]
-SIG_GENERATORS = [pain_and_rain, coin_streak_next_flip]
-GENERATORS = JANE_STREET_GENERATORS + SIG_GENERATORS
+GENERATORS = [generator for generator, _, _ in TEMPLATES]
 
 
-def make_questions(rng=None):
-    """Ten distinct types, including both Susquehanna examples each round."""
+def eligible_templates(category="Mixed", level="Mixed"):
+    if category == "Mixed":
+        categories = set(CATEGORIES)
+    elif isinstance(category, (tuple, list, set)):
+        categories = set(category)
+    else:
+        categories = {category}
+    return [spec for spec in TEMPLATES
+            if spec[1] in categories
+            and (level == "Mixed" or spec[2] == level)]
+
+
+def make_questions(rng=None, count=10, category="Mixed", level="Mixed"):
+    """Select distinct types first, then fresh variants for focused sets."""
     rng = rng or random.Random()
-    generators = rng.sample(JANE_STREET_GENERATORS, k=8) + SIG_GENERATORS[:]
-    rng.shuffle(generators)
-    questions = [generator(rng) for generator in generators]
-    if len({q["prompt"] for q in questions}) != 10:
-        raise RuntimeError("Duplicate question prompts")
+    pool = eligible_templates(category, level)
+    if not pool or count < 1:
+        raise ValueError("Choose an available topic, level, and positive length")
+    selected = []
+    while len(selected) < count:
+        selected.extend(rng.sample(pool, k=min(count - len(selected), len(pool))))
+    rng.shuffle(selected)
+    questions = []
+    seen = set()
+    for generator, group, difficulty in selected:
+        for _ in range(300):
+            question = generator(rng)
+            if question["prompt"] not in seen:
+                break
+        else:
+            raise ValueError("Not enough distinct variants for this selection")
+        seen.add(question["prompt"])
+        question.update(category=group, level=difficulty,
+                        seconds_limit=LEVEL_SECONDS[difficulty])
+        questions.append(question)
     return questions

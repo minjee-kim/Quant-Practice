@@ -5,7 +5,6 @@ import time
 from questions import make_questions
 
 
-SECONDS_PER_QUESTION = 60
 FEEDBACK_SECONDS = 2.5
 
 
@@ -23,20 +22,24 @@ def compatible_quiz(quiz):
             or not isinstance(index, int)
             or not 0 <= index <= len(questions)):
         return False
-    question_fields = {"topic", "kind", "prompt", "answer", "choices",
-                       "solution", "source_name", "source_url"}
-    result_fields = {"number", "topic", "kind", "prompt", "selected",
+    question_fields = {"topic", "category", "level", "seconds_limit",
+                       "kind", "prompt", "answer", "choices", "solution",
+                       "source_name", "source_url"}
+    result_fields = {"number", "topic", "category", "level", "seconds_limit",
+                     "kind", "prompt", "selected",
                      "answer", "correct", "timed_out", "seconds", "solution",
                      "source_name", "source_url"}
     return (all(isinstance(q, dict) and question_fields <= q.keys()
                 for q in questions)
             and all(isinstance(r, dict) and result_fields <= r.keys()
-                    for r in results))
+                    for r in results)
+            and isinstance(quiz.get("settings"), dict))
 
 
-def new_quiz(now=None):
+def new_quiz(now=None, count=10, category="Mixed", level="Mixed"):
     return {
-        "questions": make_questions(),
+        "questions": make_questions(count=count, category=category, level=level),
+        "settings": {"count": count, "category": category, "level": level},
         "index": 0,
         "started_at": time.monotonic() if now is None else now,
         "phase": "question",
@@ -51,18 +54,22 @@ def submit(quiz, selected, now=None):
         return None
     now = time.monotonic() if now is None else now
     elapsed = max(0.0, now - quiz["started_at"])
-    timed_out = elapsed >= SECONDS_PER_QUESTION
     question = quiz["questions"][quiz["index"]]
+    limit = question["seconds_limit"]
+    timed_out = elapsed >= limit
     result = {
         "number": quiz["index"] + 1,
         "topic": question["topic"],
+        "category": question["category"],
+        "level": question["level"],
+        "seconds_limit": limit,
         "kind": question["kind"],
         "prompt": question["prompt"],
         "selected": None if timed_out else selected,
         "answer": question["answer"],
         "correct": not timed_out and selected == question["answer"],
         "timed_out": timed_out,
-        "seconds": round(min(elapsed, SECONDS_PER_QUESTION), 1),
+        "seconds": round(min(elapsed, limit), 1),
         "solution": question["solution"],
         "source_name": question["source_name"],
         "source_url": question["source_url"],

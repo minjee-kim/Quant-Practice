@@ -1,19 +1,23 @@
 # Problem Set
 
-A Streamlit webpage for timed quant interview practice. Each attempt draws ten
-different problem types from thirteen templates, with fresh numbers, four choices,
-60 seconds per question, answer feedback, and a solution review. Fractions,
-conditional probabilities, and expected values render as math in the app.
+A [Streamlit app](https://quant-practice.streamlit.app/) for timed quant practice.
+Choose one topic, all topics, or a custom mix; then choose a difficulty level
+and a 5-, 10-, or 15-question set (where the question bank has enough types).
+Level 1 allows 60 seconds per question, Level 2
+120 seconds, and Level 3 180 seconds. Mixed levels use each question's own timer.
+The levels are our practice estimates, **not firm-assigned interview ratings**.
+Focused sets can repeat a problem type with new numbers. Each question has four
+choices and a worked solution; results break down performance by category,
+topic, and level and can be downloaded as CSV.
 
-Eleven templates adapt published problems in Jane Street's
+Seventeen templates adapt published problems and examples in Jane Street's
 [Probability & Markets guide](https://www.janestreet.com/static/pdfs/trading-interview.pdf).
 Two adapt examples on Susquehanna's
 [Game Theory + Decision Science page](https://sig.com/who-we-are/game-theory-decision-science/).
-Every set includes both Susquehanna examples and eight Jane Street types. These
-randomized questions are practice adaptations, **not verified accounts of live
+These randomized questions are practice adaptations, **not verified accounts of live
 interview questions**. Each app question links to its published source.
-If a browser still has a round from the older question bank, the app resets that
-round with a notice because its questions lack source information.
+If a browser still has a round from an older question bank, the app resets it
+with a notice so its timing and source information remain consistent.
 
 | Problem type | Guide page |
 | --- | ---: |
@@ -28,6 +32,11 @@ round with a notice because its questions lack source information.
 | Expected maximum of dice | 10 |
 | Optimal choice to reroll once | 10 |
 | Waiting for consecutive heads | 11 |
+| Number of heads in fair coin flips (binomial) | 4 |
+| First head on a specified flip (geometric) | 11 |
+| CDF of a sum of two dice | 4 |
+| CDF of a transformed die | 5 |
+| CDF or PMF of the maximum of dice | 10 |
 
 Susquehanna's published decision science examples inspire the **pain and rain**
 conditional-rate comparison and **next coin flip after a heads streak** questions.
@@ -45,8 +54,8 @@ claim that the timed quiz contains those firms' actual interview questions.
 | Optiver | [Quant Research internship story](https://www.optiver.com/join-us/stories/from-computer-science-to-quant-research-lucys-internship-story/) | An intern describes a data-based, open-ended interview project and recommendations. |
 | IMC | [How to prepare for an interview](https://www.imc.com/ap/articles/how-to-prepare-for-an-interview-at-imc) | Technical problem solving with a trader or engineer and explaining your work. |
 
-The 60-second multiple-choice format covers quick concepts. For research-role
-interviews, use the guides above to practice coding and longer data problems too.
+These multiple-choice sets cover quick concepts. For research-role interviews,
+use the guides above to practice coding and longer data problems too.
 
 ## Run it in VS Code
 
@@ -69,7 +78,8 @@ Select a choice and press **Enter** or click **Submit answer**.
 Open [`questions.py`](questions.py). Each generator chooses random numbers,
 calculates the exact answer, and returns a prompt, four choices, and a worked
 solution. To add a type, write another function accepting `rng` and add it to
-`GENERATORS`. `engine.py` controls the timer and score; `app.py` draws the page.
+`TEMPLATES` with its category and level. `engine.py` controls timing and scores;
+`app.py` draws the page.
 
 The two-dice problem treats the dice as distinct (for example, red and blue):
 (red 1, blue 6) and (red 6, blue 1) are two outcomes among 36. The pair order
@@ -79,5 +89,4 @@ pairs have the same sum.
 At the end, you can download your attempt as CSV. Results remain in the current
 browser session unless downloaded; cross-session history can be added later.
 
-To put the app online later, deploy this repository on Streamlit Community Cloud
-with `problem_set/app.py` as its entrypoint.
+The app is published at [quant-practice.streamlit.app](https://quant-practice.streamlit.app/).
