@@ -1,7 +1,7 @@
-"""Parameterized variants of published firm-authored practice examples.
+"""Parameterized interview-guide adaptations and original practice drills.
 
-Sources: Jane Street's Probability & Markets guide and Susquehanna's decision
-science examples. These are adaptations, not claims about live interviews.
+The firm-guide adaptations are not claims about live interview questions.
+Original distribution exercises link to their formula references.
 """
 
 import math
@@ -13,6 +13,23 @@ SIG_SOURCE = (
     "Susquehanna, Game Theory + Decision Science",
     "https://sig.com/who-we-are/game-theory-decision-science/",
 )
+NIST_UNIFORM = (
+    "NIST, Uniform Distribution",
+    "https://www.itl.nist.gov/div898/handbook/eda/section3/eda3662.htm",
+)
+NIST_NORMAL = (
+    "NIST, Normal Distribution",
+    "https://www.itl.nist.gov/div898/handbook/eda/section3/eda3661.htm",
+)
+NIST_BINOMIAL = (
+    "NIST, Binomial Distribution",
+    "https://www.itl.nist.gov/div898/handbook/eda/section3/eda366i.htm",
+)
+NORMAL_SUM_REFERENCE = (
+    "StatProofBook, linear combinations of independent normals",
+    "https://statproofbook.github.io/P/norm-lincomb.html",
+)
+ORIGINAL_DRILL = ("Original mental math drill", None)
 
 
 def choices(answer, wrong, rng):
@@ -36,8 +53,9 @@ def tex(value):
             rf"\frac{{{value.numerator}}}{{{value.denominator}}}")
 
 
-def problem(topic, kind, prompt, answer, wrong, solution, page, rng, source=None):
-    """Package a problem with its published source and worked answer."""
+def problem(topic, kind, prompt, answer, wrong, solution, page, rng,
+            source=None, source_relation="Adapted from"):
+    """Package a problem with an honest source label and worked answer."""
     answer = str(answer)
     source_name, source_url = source or (
         f"Jane Street, Probability & Markets, p. {page}",
@@ -52,6 +70,7 @@ def problem(topic, kind, prompt, answer, wrong, solution, page, rng, source=None
         "solution": solution,
         "source_name": source_name,
         "source_url": source_url,
+        "source_relation": source_relation,
     }
 
 
@@ -445,49 +464,318 @@ def max_dice_pmf(rng):
     )
 
 
+def uniform_interval(rng):
+    start = rng.randint(-5, 8)
+    width = rng.choice([6, 8, 10, 12])
+    left = rng.randint(1, width - 2)
+    right = rng.randint(left + 1, width - 1)
+    value = Fraction(right - left, width)
+    return problem(
+        "Continuous uniform", "Uniform interval probability",
+        f"Let $X\\sim\\operatorname{{Uniform}}({start},{start + width})$ "
+        f"be **continuous**. What is "
+        f"$P({start + left}<X<{start + right})$?",
+        value, [Fraction(right, width), Fraction(left, width),
+                1 - value, Fraction(right - left, width + 1),
+                Fraction(right - left + 1, width)],
+        f"The interval has length {right - left}; the whole range has "
+        f"length {width}. Continuous endpoints have probability zero, so "
+        f"$P=\\frac{{{right - left}}}{{{width}}}={tex(value)}$.",
+        None, rng, source=NIST_UNIFORM, source_relation="Formula reference",
+    )
+
+
+def uniform_mean(rng):
+    start = rng.randint(-8, 10)
+    width = rng.choice([5, 7, 9, 11])
+    end = start + width
+    value = Fraction(start + end, 2)
+    return problem(
+        "Continuous uniform", "Uniform mean",
+        f"$X\\sim\\operatorname{{Uniform}}({start},{end})$ is continuous. "
+        "What is $E[X]$?",
+        value, [start, end, Fraction(width, 2), value - 1, value + 1],
+        f"The mean is the midpoint of the interval: "
+        f"$E[X]=({start}+{end})/2={tex(value)}$.",
+        None, rng, source=NIST_UNIFORM, source_relation="Formula reference",
+    )
+
+
+def uniform_maximum(rng):
+    width = rng.choice([5, 6, 8, 10, 12])
+    threshold = rng.randint(1, width - 1)
+    p = Fraction(threshold, width)
+    value = p ** 2
+    return problem(
+        "Continuous uniform", "Maximum of two uniforms",
+        f"$X,Y\\stackrel{{\\mathrm{{iid}}}}{{\\sim}}"
+        f"\\operatorname{{Uniform}}(0,{width})$ are continuous. "
+        f"What is $P(\\max(X,Y)\\le {threshold})$?",
+        value, [p, 1 - value, (1 - p) ** 2,
+                Fraction(threshold + 1, width) ** 2,
+                Fraction(threshold - 1, width) ** 2],
+        f"Both independent values must be at most {threshold}. "
+        f"Thus $P=(\\frac{{{threshold}}}{{{width}}})^2={tex(value)}$.",
+        None, rng, source=NIST_UNIFORM, source_relation="Formula reference",
+    )
+
+
+def uniform_conditional_mean(rng):
+    start = rng.randint(-5, 7)
+    width = rng.choice([6, 8, 10, 12])
+    cutoff = start + rng.randint(1, width - 1)
+    end = start + width
+    value = Fraction(cutoff + end, 2)
+    return problem(
+        "Continuous uniform", "Conditional uniform mean",
+        f"$X\\sim\\operatorname{{Uniform}}({start},{end})$ is continuous. "
+        f"What is $E[X\\mid X>{cutoff}]$?",
+        value, [Fraction(start + end, 2), Fraction(start + cutoff, 2),
+                cutoff, end, value + 1],
+        f"Conditioning restricts $X$ to the interval "
+        f"$({cutoff},{end})$, still uniformly. Its midpoint is "
+        f"$({cutoff}+{end})/2={tex(value)}$.",
+        None, rng, source=NIST_UNIFORM, source_relation="Formula reference",
+    )
+
+
+def normal_z_score(rng):
+    mean = rng.randint(-10, 20)
+    sd = rng.choice([2, 3, 4, 5])
+    z = rng.choice([-2, -1, 1, 2])
+    observed = mean + z * sd
+    return problem(
+        "Normal", "Standardize a normal variable",
+        f"$X\\sim\\mathcal{{N}}({mean},{sd ** 2})$, where the second "
+        f"parameter is **variance**. What is the $z$-score of "
+        f"$X={observed}$?",
+        z, [z + 1, z - 1, z * sd, -z, 0],
+        f"The standard deviation is $\\sqrt{{{sd ** 2}}}={sd}$. "
+        f"Standardize: $z=({observed}-({mean}))/{sd}={z}$.",
+        None, rng, source=NIST_NORMAL, source_relation="Formula reference",
+    )
+
+
+def normal_tail(rng):
+    mean = rng.randint(-10, 20)
+    sd = rng.choice([2, 3, 4, 5])
+    z = rng.choice([1, 2])
+    upper = mean + z * sd
+    cdf = {1: "0.8413", 2: "0.9772"}[z]
+    tail = {1: "0.1587", 2: "0.0228"}[z]
+    return problem(
+        "Normal", "Upper normal tail",
+        f"$X\\sim\\mathcal{{N}}({mean},{sd ** 2})$, with **variance** "
+        f"as the second parameter. What is "
+        f"$P(X>{upper})$? Use $\\Phi(1)\\approx0.8413$ and "
+        f"$\\Phi(2)\\approx0.9772$.",
+        tail, [cdf, "0.5000", "0.6826", "0.9544"],
+        f"$z=({upper}-({mean}))/{sd}={z}$. The upper tail is "
+        f"$1-\\Phi({z})\\approx1-{cdf}={tail}$.",
+        None, rng, source=NIST_NORMAL, source_relation="Formula reference",
+    )
+
+
+def normal_sum(rng):
+    mean_x = rng.randint(-5, 10)
+    mean_y = rng.randint(-5, 10)
+    sd_x = rng.choice([2, 3, 4])
+    sd_y = rng.choice([2, 3, 4])
+    mean = mean_x + mean_y
+    variance = sd_x ** 2 + sd_y ** 2
+    label = lambda m, v: rf"$\mathcal{{N}}({m},{v})$"
+    return problem(
+        "Normal", "Sum of independent normals",
+        f"Independent $X\\sim\\mathcal{{N}}({mean_x},{sd_x ** 2})$ "
+        f"and $Y\\sim\\mathcal{{N}}({mean_y},{sd_y ** 2})$. "
+        "Both second parameters are **variances**. What is the "
+        "distribution of $X+Y$?",
+        label(mean, variance),
+        [label(mean, (sd_x + sd_y) ** 2),
+         label(mean, abs(sd_x ** 2 - sd_y ** 2)),
+         label(mean_x - mean_y, variance),
+         label(mean + 1, variance)],
+        f"Independent normals add to a normal. Add the means and "
+        f"variances: $E[X+Y]={mean_x}+({mean_y})={mean}$, "
+        f"$\\operatorname{{Var}}(X+Y)={sd_x ** 2}+{sd_y ** 2}="
+        f"{variance}$. Hence {label(mean, variance)}.",
+        None, rng, source=NORMAL_SUM_REFERENCE, source_relation="Formula reference",
+    )
+
+
+def binomial_biased(rng):
+    n = rng.randint(3, 7)
+    k = rng.randint(1, n - 1)
+    p = rng.choice([Fraction(1, 4), Fraction(1, 3), Fraction(2, 3),
+                    Fraction(3, 4)])
+    value = math.comb(n, k) * p ** k * (1 - p) ** (n - k)
+    wrong = [p ** k * (1 - p) ** (n - k),
+             math.comb(n, k) * p ** (n - k) * (1 - p) ** k,
+             value + Fraction(1, 10 ** n), value - Fraction(1, 10 ** n),
+             1 - value]
+    return problem(
+        "Binomial", "Biased coin count",
+        f"Flip a coin {n} times independently, with "
+        f"$P(\\text{{heads}})={tex(p)}$ each time. "
+        f"What is $P(\\text{{exactly {k} heads}})$?",
+        value, [x for x in wrong if 0 <= x <= 1],
+        f"There are $\\binom{{{n}}}{{{k}}}={math.comb(n, k)}$ "
+        f"ways to place the heads. Thus "
+        f"$P(X={k})=\\binom{{{n}}}{{{k}}}"
+        f"({tex(p)})^{{{k}}}({tex(1 - p)})^{{{n - k}}}="
+        f"{tex(value)}$.",
+        None, rng, source=NIST_BINOMIAL, source_relation="Formula reference",
+    )
+
+
+def binomial_variance(rng):
+    n = rng.randint(4, 20)
+    p = rng.choice([Fraction(1, 4), Fraction(1, 3), Fraction(1, 2),
+                    Fraction(2, 3), Fraction(3, 4)])
+    value = n * p * (1 - p)
+    return problem(
+        "Binomial", "Binomial variance",
+        f"$X\\sim\\operatorname{{Binomial}}({n},{tex(p)})$. "
+        "What is $\\operatorname{Var}(X)$?",
+        value, [n * p, p * (1 - p), n * (1 - p),
+                value + 1, value - 1],
+        f"For a binomial random variable, "
+        f"$\\operatorname{{Var}}(X)=np(1-p)="
+        f"{n}({tex(p)})({tex(1-p)})={tex(value)}$.",
+        None, rng, source=NIST_BINOMIAL, source_relation="Formula reference",
+    )
+
+
+def binomial_at_least_one(rng):
+    n = rng.randint(3, 8)
+    p = rng.choice([Fraction(1, 4), Fraction(1, 3), Fraction(1, 2),
+                    Fraction(2, 3)])
+    no_success = (1 - p) ** n
+    value = 1 - no_success
+    return problem(
+        "Binomial", "At least one success",
+        f"$X\\sim\\operatorname{{Binomial}}({n},{tex(p)})$. "
+        "What is $P(X\\ge 1)$?",
+        value, [no_success, p ** n, p, 1 - p ** n,
+                value - Fraction(1, 10 ** n)],
+        f"Subtract the zero-success probability: "
+        f"$P(X\\ge1)=1-P(X=0)=1-(1-{tex(p)})^{{{n}}}="
+        f"{tex(value)}$.",
+        None, rng, source=NIST_BINOMIAL, source_relation="Formula reference",
+    )
+
+
+def mental_multiply(rng):
+    a = rng.randint(12, 49)
+    b = rng.choice([11, 12, 15])
+    value = a * b
+    return problem(
+        "Arithmetic", "Quick multiplication",
+        f"Compute $\\mathbf{{{a}\\times {b}}}$ mentally.",
+        value, [value + a, value - a, value + 10, value - 10],
+        f"For example, ${a}\\times{b}="
+        f"{a}\\times({b - 10}+10)="
+        f"{a * (b - 10)}+{a * 10}={value}$.",
+        None, rng, source=ORIGINAL_DRILL, source_relation="Original drill",
+    )
+
+
+def mental_percent(rng):
+    base = rng.randint(4, 25) * 20
+    percent = rng.choice([5, 10, 15, 20, 25])
+    value = base * percent // 100
+    return problem(
+        "Percentages", "Percentage of a number",
+        f"What is **{percent}% of {base}**?",
+        value, [value + base // 20, value - base // 20,
+                base * (percent + 10) // 100,
+                base * (percent - 5) // 100],
+        f"${percent}\\%\\times {base}="
+        f"\\frac{{{percent}}}{{100}}\\times {base}={value}$.",
+        None, rng, source=ORIGINAL_DRILL, source_relation="Original drill",
+    )
+
+
+def mental_fraction_percent(rng):
+    denominator = rng.choice([4, 5, 8, 10, 20])
+    numerator = rng.randint(1, denominator - 1)
+    value = 100 * Fraction(numerator, denominator)
+    percent_label = lambda x: f"{float(x):g}%"
+    return problem(
+        "Percentages", "Fraction to percentage",
+        f"Convert $\\frac{{{numerator}}}{{{denominator}}}$ "
+        "to a percentage.",
+        percent_label(value),
+        [percent_label(value + 5), percent_label(value - 5),
+         percent_label(value + 10), percent_label(value - 10)],
+        f"Multiply by 100: $\\frac{{{numerator}}}{{{denominator}}}"
+        f"\\times100\\%={tex(value)}\\%$.",
+        None, rng, source=ORIGINAL_DRILL, source_relation="Original drill",
+    )
+
+
 # Levels are our practice estimates, not firm-supplied interview ratings.
 LEVEL_SECONDS = {"Level 1": 60, "Level 2": 120, "Level 3": 180}
-CATEGORIES = ("Probability", "Distributions", "Expected value", "Markets & data")
+CATEGORIES = ("Probability", "Distributions", "Expected value",
+              "Markets & data", "Mental math")
+DISTRIBUTION_FAMILIES = ("Uniform", "Normal", "Binomial", "Geometric",
+                         "Discrete dice")
 TEMPLATES = [
-    (dice_sum, "Probability", "Level 1"),
-    (odd_product, "Probability", "Level 1"),
-    (coin_streak_next_flip, "Probability", "Level 1"),
-    (card_draws, "Probability", "Level 2"),
-    (conditional_coins, "Probability", "Level 2"),
-    (conditional_prime, "Probability", "Level 3"),
-    (binomial_heads, "Distributions", "Level 1"),
-    (first_head_distribution, "Distributions", "Level 1"),
-    (transformed_die_cdf, "Distributions", "Level 2"),
-    (dice_sum_cdf, "Distributions", "Level 2"),
-    (max_dice_cdf, "Distributions", "Level 2"),
-    (max_dice_pmf, "Distributions", "Level 3"),
-    (weighted_die, "Expected value", "Level 1"),
-    (conditional_die_mean, "Expected value", "Level 2"),
-    (max_dice, "Expected value", "Level 2"),
-    (optimal_reroll, "Expected value", "Level 3"),
-    (heads_in_row, "Expected value", "Level 3"),
-    (die_contract, "Markets & data", "Level 1"),
-    (pain_and_rain, "Markets & data", "Level 2"),
+    (dice_sum, "Probability", "Level 1", None),
+    (odd_product, "Probability", "Level 1", None),
+    (coin_streak_next_flip, "Probability", "Level 1", None),
+    (card_draws, "Probability", "Level 2", None),
+    (conditional_coins, "Probability", "Level 2", None),
+    (conditional_prime, "Probability", "Level 3", None),
+    (uniform_interval, "Distributions", "Level 1", "Uniform"),
+    (uniform_mean, "Distributions", "Level 1", "Uniform"),
+    (uniform_maximum, "Distributions", "Level 2", "Uniform"),
+    (uniform_conditional_mean, "Distributions", "Level 2", "Uniform"),
+    (normal_z_score, "Distributions", "Level 1", "Normal"),
+    (normal_tail, "Distributions", "Level 2", "Normal"),
+    (normal_sum, "Distributions", "Level 2", "Normal"),
+    (binomial_heads, "Distributions", "Level 1", "Binomial"),
+    (binomial_variance, "Distributions", "Level 1", "Binomial"),
+    (binomial_biased, "Distributions", "Level 2", "Binomial"),
+    (binomial_at_least_one, "Distributions", "Level 2", "Binomial"),
+    (first_head_distribution, "Distributions", "Level 1", "Geometric"),
+    (transformed_die_cdf, "Distributions", "Level 2", "Discrete dice"),
+    (dice_sum_cdf, "Distributions", "Level 2", "Discrete dice"),
+    (max_dice_cdf, "Distributions", "Level 2", "Discrete dice"),
+    (max_dice_pmf, "Distributions", "Level 3", "Discrete dice"),
+    (weighted_die, "Expected value", "Level 1", None),
+    (conditional_die_mean, "Expected value", "Level 2", None),
+    (max_dice, "Expected value", "Level 2", None),
+    (optimal_reroll, "Expected value", "Level 3", None),
+    (heads_in_row, "Expected value", "Level 3", None),
+    (die_contract, "Markets & data", "Level 1", None),
+    (pain_and_rain, "Markets & data", "Level 2", None),
+    (mental_multiply, "Mental math", "Level 1", None),
+    (mental_percent, "Mental math", "Level 1", None),
+    (mental_fraction_percent, "Mental math", "Level 1", None),
 ]
-GENERATORS = [generator for generator, _, _ in TEMPLATES]
+GENERATORS = [generator for generator, _, _, _ in TEMPLATES]
 
 
-def eligible_templates(category="Mixed", level="Mixed"):
+def eligible_templates(category="Mixed", level="Mixed", families=None):
     if category == "Mixed":
         categories = set(CATEGORIES)
     elif isinstance(category, (tuple, list, set)):
         categories = set(category)
     else:
         categories = {category}
+    families = set(DISTRIBUTION_FAMILIES if families is None else families)
     return [spec for spec in TEMPLATES
             if spec[1] in categories
-            and (level == "Mixed" or spec[2] == level)]
+            and (level == "Mixed" or spec[2] == level)
+            and (spec[1] != "Distributions" or spec[3] in families)]
 
 
-def make_questions(rng=None, count=10, category="Mixed", level="Mixed"):
+def make_questions(rng=None, count=10, category="Mixed", level="Mixed",
+                   families=None):
     """Select distinct types first, then fresh variants for focused sets."""
     rng = rng or random.Random()
-    pool = eligible_templates(category, level)
+    pool = eligible_templates(category, level, families)
     if not pool or count < 1:
         raise ValueError("Choose an available topic, level, and positive length")
     selected = []
@@ -496,7 +784,7 @@ def make_questions(rng=None, count=10, category="Mixed", level="Mixed"):
     rng.shuffle(selected)
     questions = []
     seen = set()
-    for generator, group, difficulty in selected:
+    for generator, group, difficulty, family in selected:
         for _ in range(300):
             question = generator(rng)
             if question["prompt"] not in seen:
@@ -504,7 +792,7 @@ def make_questions(rng=None, count=10, category="Mixed", level="Mixed"):
         else:
             raise ValueError("Not enough distinct variants for this selection")
         seen.add(question["prompt"])
-        question.update(category=group, level=difficulty,
+        question.update(category=group, family=family, level=difficulty,
                         seconds_limit=LEVEL_SECONDS[difficulty])
         questions.append(question)
     return questions

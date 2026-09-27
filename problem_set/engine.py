@@ -22,13 +22,13 @@ def compatible_quiz(quiz):
             or not isinstance(index, int)
             or not 0 <= index <= len(questions)):
         return False
-    question_fields = {"topic", "category", "level", "seconds_limit",
+    question_fields = {"topic", "category", "family", "level", "seconds_limit",
                        "kind", "prompt", "answer", "choices", "solution",
-                       "source_name", "source_url"}
-    result_fields = {"number", "topic", "category", "level", "seconds_limit",
+                       "source_name", "source_url", "source_relation"}
+    result_fields = {"number", "topic", "category", "family", "level", "seconds_limit",
                      "kind", "prompt", "selected",
                      "answer", "correct", "timed_out", "seconds", "solution",
-                     "source_name", "source_url"}
+                     "source_name", "source_url", "source_relation"}
     return (all(isinstance(q, dict) and question_fields <= q.keys()
                 for q in questions)
             and all(isinstance(r, dict) and result_fields <= r.keys()
@@ -36,10 +36,12 @@ def compatible_quiz(quiz):
             and isinstance(quiz.get("settings"), dict))
 
 
-def new_quiz(now=None, count=10, category="Mixed", level="Mixed"):
+def new_quiz(now=None, count=10, category="Mixed", level="Mixed", families=None):
     return {
-        "questions": make_questions(count=count, category=category, level=level),
-        "settings": {"count": count, "category": category, "level": level},
+        "questions": make_questions(count=count, category=category, level=level,
+                                    families=families),
+        "settings": {"count": count, "category": category, "level": level,
+                     "families": families},
         "index": 0,
         "started_at": time.monotonic() if now is None else now,
         "phase": "question",
@@ -61,6 +63,7 @@ def submit(quiz, selected, now=None):
         "number": quiz["index"] + 1,
         "topic": question["topic"],
         "category": question["category"],
+        "family": question["family"],
         "level": question["level"],
         "seconds_limit": limit,
         "kind": question["kind"],
@@ -73,6 +76,7 @@ def submit(quiz, selected, now=None):
         "solution": question["solution"],
         "source_name": question["source_name"],
         "source_url": question["source_url"],
+        "source_relation": question["source_relation"],
     }
     quiz["results"].append(result)
     quiz["phase"] = "feedback"

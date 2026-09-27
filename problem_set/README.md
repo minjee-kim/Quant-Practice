@@ -1,14 +1,17 @@
 # Problem Set
 
 A [Streamlit app](https://quant-practice.streamlit.app/) for timed quant practice.
-Choose one topic, all topics, or a custom mix; then choose a difficulty level
-and a 5-, 10-, or 15-question set (where the question bank has enough types).
+Select any combination of topics: probability, distributions, expected value,
+markets and data, or mental math. Within distributions, choose Uniform
+(continuous), Normal, Binomial, Geometric, or discrete dice. Choose a level and
+a 5-, 10-, or 15-question set (where the question bank has enough types).
 Level 1 allows 60 seconds per question, Level 2
 120 seconds, and Level 3 180 seconds. Mixed levels use each question's own timer.
 The levels are our practice estimates, **not firm-assigned interview ratings**.
 Focused sets can repeat a problem type with new numbers. Each question has four
-choices and a worked solution; results break down performance by category,
-topic, and level and can be downloaded as CSV.
+choices and a worked solution; results break down performance by topic,
+distribution family, question type, and level. You can filter the review to
+incorrect answers or timeouts and download the full results as CSV.
 
 Seventeen templates adapt published problems and examples in Jane Street's
 [Probability & Markets guide](https://www.janestreet.com/static/pdfs/trading-interview.pdf).
@@ -37,6 +40,12 @@ with a notice so its timing and source information remain consistent.
 | CDF of a sum of two dice | 4 |
 | CDF of a transformed die | 5 |
 | CDF or PMF of the maximum of dice | 10 |
+
+The additional Uniform, Normal, and Binomial exercises are original drills
+based on formulas in [NIST's distribution reference](https://www.itl.nist.gov/div898/handbook/eda/section3/eda366.htm)
+and a [proof for sums of independent normals](https://statproofbook.github.io/P/norm-lincomb.html).
+Mental math drills are original as well. Formula links are references for the
+mathematics, not evidence that a firm asks those questions.
 
 Susquehanna's published decision science examples inspire the **pain and rain**
 conditional-rate comparison and **next coin flip after a heads streak** questions.
