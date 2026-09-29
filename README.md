@@ -1,9 +1,10 @@
 # Quant Practice
 
-Practice probability and statistics for quant interviews. The timed app has
-theory questions, distribution drills, and mental math, with worked answers
-and a results breakdown. Questions adapted from published firm guides are
-labeled as such; the other exercises are original practice.
+Practice probability and statistics for quant interviews. The app gives you
+10 random theory and mental math questions, with a timer only if you turn it on.
+It includes worked answers and a results breakdown. Questions adapted from
+published firm guides are labeled as such; the other exercises are original
+practice.
 
 **[Open the practice app](https://quant-practice.streamlit.app/)**
 

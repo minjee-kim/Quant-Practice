@@ -1,17 +1,13 @@
 # Problem Set
 
-A [Streamlit app](https://quant-practice.streamlit.app/) for timed quant practice.
-Select any combination of topics: probability, distributions, expected value,
-markets and data, or mental math. Within distributions, choose Uniform
-(continuous), Normal, Binomial, Geometric, or discrete dice. Choose a level and
-a 5-, 10-, or 15-question set (where the question bank has enough types).
-Level 1 allows 60 seconds per question, Level 2
-120 seconds, and Level 3 180 seconds. Mixed levels use each question's own timer.
-The levels are our practice estimates, **not firm-assigned interview ratings**.
-Focused sets can repeat a problem type with new numbers. Each question has four
-choices and a worked solution; results break down performance by topic,
-distribution family, question type, and level. You can filter the review to
-incorrect answers or timeouts and download the full results as CSV.
+A [Streamlit app](https://quant-practice.streamlit.app/) for quant practice.
+Press **Start 10 questions** for a random mix of probability, distributions,
+expected value, markets and data, and mental math. Practice is untimed unless
+you turn on **Use a timer** before starting. With the timer on, Level 1 allows
+60 seconds per question, Level 2 allows 120 seconds, and Level 3 allows
+180 seconds. Levels are our practice estimates, **not firm-assigned interview
+ratings**. Each question has four choices. Results show your score, a topic
+breakdown, worked solutions, and a CSV download.
 
 Seventeen templates adapt published problems and examples in Jane Street's
 [Probability & Markets guide](https://www.janestreet.com/static/pdfs/trading-interview.pdf).
@@ -19,8 +15,8 @@ Two adapt examples on Susquehanna's
 [Game Theory + Decision Science page](https://sig.com/who-we-are/game-theory-decision-science/).
 These randomized questions are practice adaptations, **not verified accounts of live
 interview questions**. Each app question links to its published source.
-If a browser still has a round from an older question bank, the app resets it
-with a notice so its timing and source information remain consistent.
+If a browser still has a round from an older app version, the app starts fresh
+so the optional timer works consistently.
 
 | Problem type | Guide page |
 | --- | ---: |
