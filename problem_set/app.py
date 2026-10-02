@@ -17,17 +17,20 @@ st.title("Quant Practice")
 
 
 def display_choice(value):
-    """Use compact inline math so radio choices keep comfortable spacing."""
+    """Render a choice without reducing it. (1/3)^8 must not become 1/6561."""
     if value is None:
         return "Time expired"
-    if isinstance(value, str) and value.startswith("$") and value.endswith("$"):
-        return value
-    if isinstance(value, str) and re.fullmatch(r"-?\d+\.\d+", value):
-        return f"${value}$"
+    text = str(value)
+    if text.startswith("$") and text.endswith("$"):
+        return text
+    if re.fullmatch(r"-?\d+/\d+", text):
+        return f"${text}$"
+    if re.fullmatch(r"-?\d+\.\d+", text):
+        return f"${text}$"
     try:
-        number = Fraction(value)
+        number = Fraction(text)
     except (ValueError, TypeError, ZeroDivisionError):
-        return str(value).replace("$", r"\$")
+        return text.replace("$", r"\$")
     if number.denominator == 1:
         return f"${number.numerator}$"
     return f"${number.numerator}/{number.denominator}$"
@@ -106,6 +109,7 @@ def drill():
                 text=f"Question {index + 1} of {len(quiz['questions'])}")
     st.subheader(question["kind"])
     st.markdown(question["prompt"])
+    st.caption("Choices stay in the form the problem uses, such as $(1/3)^8$ or $6/36$, not a reduced fraction.")
     if quiz["timed"]:
         seconds_left = max(0, math.ceil(question["seconds_limit"] - (now - quiz["started_at"])))
         st.metric("Time remaining", f"{seconds_left // 60}:{seconds_left % 60:02d}")
