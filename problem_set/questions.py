@@ -41,22 +41,63 @@ def choices(answer, wrong, rng):
         if len(options) == 4:
             break
     if len(options) != 4:
-        raise ValueError("Need three distinct wrong answers")
+        raise ValueError(f"Need three distinct wrong answers, got {options}")
     rng.shuffle(options)
     return options
 
 
 def tex(value):
-    """A compact LaTeX integer or exact fraction for displayed math."""
+    """A compact LaTeX integer or exact fraction for worked solutions."""
     value = Fraction(value)
     return (str(value.numerator) if value.denominator == 1 else
             rf"\frac{{{value.numerator}}}{{{value.denominator}}}")
 
 
+def show(body):
+    """Choice label. Dollar signs stop the app from reducing the expression."""
+    return f"${body}$"
+
+
+def slash(num, den):
+    """Unreduced fraction, so 6/36 stays 6/36."""
+    num, den = int(num), int(den)
+    if den < 0:
+        num, den = -num, -den
+    if den == 1:
+        return str(num)
+    return f"{num}/{den}"
+
+
+def pow_frac(num, den, exp):
+    """(1/3)^8, not the reduced 1/6561."""
+    exp = int(exp)
+    base = slash(num, den)
+    if exp == 0:
+        return "1"
+    if exp == 1:
+        return f"({base})" if "/" in base else base
+    return f"({base})^{{{exp}}}"
+
+
+def product(*parts):
+    return r" \cdot ".join(part for part in parts if part not in (None, "", "1"))
+
+
+def as_label(value):
+    """Keep a preformatted expression; otherwise show an exact slash fraction."""
+    if isinstance(value, str):
+        return value
+    value = Fraction(value)
+    if value < 0:
+        return show("-" + slash(-value.numerator, value.denominator))
+    return show(slash(value.numerator, value.denominator))
+
+
 def problem(topic, kind, prompt, answer, wrong, solution, page, rng,
             source=None, source_relation="Adapted from"):
     """Package a problem with an honest source label and worked answer."""
-    answer = str(answer)
+    answer = as_label(answer)
+    wrong = [as_label(value) for value in wrong]
     source_name, source_url = source or (
         f"Jane Street, Probability & Markets, p. {page}",
         f"{GUIDE_URL}#page={page + 1}",
@@ -66,7 +107,7 @@ def problem(topic, kind, prompt, answer, wrong, solution, page, rng,
         "kind": kind,
         "prompt": prompt,
         "answer": answer,
-        "choices": choices(answer, [str(value) for value in wrong], rng),
+        "choices": choices(answer, wrong, rng),
         "solution": solution,
         "source_name": source_name,
         "source_url": source_url,
@@ -78,15 +119,17 @@ def dice_sum(rng):
     target = rng.randint(3, 11)
     count = sum(a + b == target for a in range(1, 7) for b in range(1, 7))
     value = Fraction(count, 36)
+    answer = show(slash(count, 36))
     return problem(
         "Counting", "Two dice: sum",
         f"Roll a fair **red** die and a fair **blue** die. "
         f"What is $P(R+B={target})$, where $R$ and $B$ are their faces?",
-        value, [Fraction(1, 11), Fraction(count - 1, 36),
-                Fraction(count + 1, 36), Fraction(max(1, count - 2), 36)],
+        answer, [show(slash(count - 1, 36)), show(slash(count + 1, 36)),
+                 show(slash(max(1, count - 2), 36)), show("1/6")],
         f"The dice are distinct, giving $6\\times6=36$ ordered outcomes. "
         f"{count} pairs sum to {target}, so "
-        f"$P(R+B={target})=\\frac{{{count}}}{{36}}={tex(value)}$.",
+        f"$P(R+B={target})={slash(count, 36)}$, which is ${tex(value)}$ "
+        f"in lowest terms.",
         2, rng,
     )
 
@@ -101,18 +144,24 @@ def card_draws(rng):
     without_replacement = first * Fraction(count - 1, 51)
     value = with_replacement if replace else without_replacement
     condition = "replacing the first card" if replace else "without replacing the first card"
+    with_label = show(pow_frac(count, 52, 2))
+    without_label = show(product(slash(count, 52), slash(count - 1, 51)))
+    answer = with_label if replace else without_label
     return problem(
         "Probability", "Card draws",
         f"Draw two cards from a standard 52-card deck, **{condition}**. "
         f"What is $P(\\text{{both are {label}}})$?",
-        value, [without_replacement if replace else with_replacement,
-                first, Fraction(count - 1, 51),
-                first * Fraction(count - 1, 52), first * Fraction(count, 51)],
-        f"The first draw succeeds with probability $\\frac{{{count}}}{{52}}$. "
-        + (f"With replacement, the second chance is $\\frac{{{count}}}{{52}}$."
+        answer, [without_label if replace else with_label,
+                 show(slash(count, 52)),
+                 show(slash(count - 1, 51)),
+                 show(product(slash(count, 52), slash(count - 1, 52)))],
+        f"The first draw succeeds with probability ${slash(count, 52)}$. "
+        + (f"With replacement, the second chance is ${slash(count, 52)}$, "
+           f"so $P={pow_frac(count, 52, 2)}$."
            if replace else
-           f"Without replacement, it is $\\frac{{{count - 1}}}{{51}}$.")
-        + f" Multiply: $P={tex(value)}$.",
+           f"Without replacement, it is ${slash(count - 1, 51)}$, "
+           f"so $P={product(slash(count, 52), slash(count - 1, 51))}$.")
+        + f" In lowest terms that is ${tex(value)}$.",
         4, rng,
     )
 
@@ -124,10 +173,12 @@ def odd_product(rng):
         "Independence", "Odd die product",
         f"Roll a fair six-sided die {rolls} times. "
         "What is $P(\\text{the product is odd})$?",
-        value, [Fraction(1, 2) ** (rolls - 1), Fraction(1, 2) ** (rolls + 1),
-                Fraction(1, 3) ** rolls, Fraction(1, 2)],
+        show(pow_frac(1, 2, rolls)),
+        [show(pow_frac(1, 2, rolls - 1)), show(pow_frac(1, 2, rolls + 1)),
+         show(pow_frac(1, 3, rolls)), show(pow_frac(1, 6, rolls))],
         f"The product is odd only when all {rolls} rolls are odd. "
-        f"Independence gives $P=(\\frac{{3}}{{6}})^{{{rolls}}}={tex(value)}$.",
+        f"Each roll is odd with probability $3/6=1/2$, so "
+        f"$P=(1/2)^{{{rolls}}}$, which is ${tex(value)}$ in lowest terms.",
         4, rng,
     )
 
@@ -175,20 +226,22 @@ def conditional_coins(rng):
     heads = rng.randint(1, flips - 1)
     ways = math.comb(flips, heads)
     value = Fraction(ways, 2 ** flips - 1)
+    answer = show(rf"\binom{{{flips}}}{{{heads}}}/(2^{{{flips}}}-1)")
     return problem(
         "Conditional probability", "Heads given a tail",
         # Use the singular form when the target count is one.
         f"Flip {flips} fair coins. Given **at least one tail**, what is "
         f"$P(\\text{{exactly {heads} {'head' if heads == 1 else 'heads'}}}"
         f"\\mid\\text{{at least one tail}})$?",
-        value, [Fraction(ways, 2 ** flips),
-                Fraction(ways, 2 ** flips - 2),
-                Fraction(ways - 1, 2 ** flips - 1),
-                1 - value, Fraction(heads, flips)],
+        answer, [show(rf"\binom{{{flips}}}{{{heads}}}/2^{{{flips}}}"),
+                 show(rf"\binom{{{flips}}}{{{heads}}}/(2^{{{flips}}}-2)"),
+                 show(rf"({ways}-1)/(2^{{{flips}}}-1)"),
+                 show(slash(ways, 2 ** flips - 1))],
         f"Exclude the all-heads sequence from the $2^{{{flips}}}$ possibilities. "
         f"Exactly {heads} {'head' if heads == 1 else 'heads'} occurs in "
-        f"$\\binom{{{flips}}}{{{heads}}}={ways}$ "
-        f"sequences, so $P=\\frac{{{ways}}}{{2^{{{flips}}}-1}}={tex(value)}$.",
+        f"$\\binom{{{flips}}}{{{heads}}}={ways}$ sequences, so "
+        f"$P=\\binom{{{flips}}}{{{heads}}}/(2^{{{flips}}}-1)"
+        f"={slash(ways, 2 ** flips - 1)}$.",
         7, rng,
     )
 
@@ -247,14 +300,18 @@ def heads_in_row(rng):
 
 
 def money(amount):
-    return f"-${-amount}" if amount < 0 else f"${amount}"
+    """Exact dollar amount, including halves from an even-sided die."""
+    amount = Fraction(amount)
+    sign = "-" if amount < 0 else ""
+    body = slash(abs(amount.numerator), amount.denominator)
+    return show(rf"\${sign}{body}")
 
 
 def die_contract(rng):
     sides = rng.choice([6, 8, 10, 20])
     multiplier = rng.choice([2, 4])
-    fair_value = multiplier * (sides + 1) // 2
-    cost = fair_value + rng.choice([-4, -2, 0, 2, 4])
+    fair_value = multiplier * Fraction(sides + 1, 2)
+    cost = int(fair_value) + rng.choice([-4, -2, 0, 2, 4])
     value = fair_value - cost
     return problem(
         "Markets", "Die contract value",
@@ -262,9 +319,9 @@ def die_contract(rng):
         f"**{multiplier} dollars per point** and costs **{cost} dollars**. "
         f"What is the expected profit $E[{multiplier}X-{cost}]$ in dollars?",
         money(value), [money(value + d) for d in (-4, -2, 2, 4)],
-        f"The average face is $E[X]=\\frac{{{sides}+1}}{{2}}$. "
-        f"Expected payout is {fair_value} dollars, so "
-        f"$E[{multiplier}X-{cost}]={fair_value}-{cost}={value}$ dollars.",
+        f"The average face is $E[X]=({sides}+1)/2={tex(Fraction(sides + 1, 2))}$. "
+        f"Expected payout is ${tex(fair_value)}$ dollars, so "
+        f"$E[{multiplier}X-{cost}]={tex(fair_value)}-{cost}={tex(value)}$ dollars.",
         9, rng,
     )
 
@@ -351,17 +408,19 @@ def binomial_heads(rng):
     heads = rng.randint(1, flips - 1)
     ways = math.comb(flips, heads)
     value = Fraction(ways, 2 ** flips)
+    answer = show(rf"\binom{{{flips}}}{{{heads}}}(1/2)^{{{flips}}}")
     return problem(
         "Binomial", "Number of heads",
         f"Flip {flips} independent fair coins. If $H$ is the number of heads, "
         f"what is $P(H={heads})$?",
-        value, [Fraction(ways - 1, 2 ** flips),
-                Fraction(ways + 1, 2 ** flips),
-                Fraction(1, 2 ** flips), Fraction(heads, flips)],
+        answer, [show(rf"\binom{{{flips}}}{{{heads - 1}}}(1/2)^{{{flips}}}"),
+                 show(rf"\binom{{{flips}}}{{{heads + 1}}}(1/2)^{{{flips}}}"),
+                 show(pow_frac(1, 2, flips)),
+                 show(rf"\binom{{{flips}}}{{{heads}}}/2^{{{flips}}}")],
         f"Choose which {heads} positions are heads. Each sequence has "
-        f"probability $2^{{-{flips}}}$, so "
-        f"$P(H={heads})=\\binom{{{flips}}}{{{heads}}}2^{{-{flips}}}"
-        f"={tex(value)}$.",
+        f"probability $(1/2)^{{{flips}}}$, so "
+        f"$P(H={heads})=\\binom{{{flips}}}{{{heads}}}(1/2)^{{{flips}}}"
+        f"={slash(ways, 2 ** flips)}$.",
         4, rng,
     )
 
@@ -373,11 +432,13 @@ def first_head_distribution(rng):
         "Geometric", "First head",
         f"Flip a fair coin until the first head. What is the probability "
         f"the first head occurs on flip ${flip}$?",
-        value, [Fraction(1, 2) ** (flip - 1),
-                Fraction(1, 2) ** (flip + 1), 1 - value,
-                Fraction(flip, 2 ** flip)],
+        show(pow_frac(1, 2, flip)),
+        [show(pow_frac(1, 2, flip - 1)),
+         show(pow_frac(1, 2, flip + 1)),
+         show(f"1-{pow_frac(1, 2, flip)}"),
+         show(slash(flip, 2 ** flip))],
         f"The sequence must have {flip - 1} tails followed by one head. "
-        f"By independence, $P(N={flip})=(\\frac{{1}}{{2}})^{{{flip}}}"
+        f"By independence, $P(N={flip})=(1/2)^{{{flip}}}"
         f"={tex(value)}$.",
         11, rng,
     )
@@ -394,11 +455,12 @@ def dice_sum_cdf(rng):
         "Discrete distribution", "Sum of dice: CDF",
         f"Roll two distinct fair six-sided dice and let $S$ be their sum. "
         f"What is $P(S\\le {cutoff})$?",
-        value, [Fraction(equal_count, 36), Fraction(count - 1, 36),
-                Fraction(count + 1, 36), 1 - value],
+        show(slash(count, 36)),
+        [show(slash(equal_count, 36)), show(slash(count - 1, 36)),
+         show(slash(count + 1, 36)), show(f"1-({slash(count, 36)})")],
         f"Count all ordered pairs whose sum is at most {cutoff}. "
         f"There are {count} out of 36, so "
-        f"$P(S\\le {cutoff})=\\frac{{{count}}}{{36}}={tex(value)}$.",
+        f"$P(S\\le {cutoff})={slash(count, 36)}$.",
         4, rng,
     )
 
@@ -413,12 +475,14 @@ def transformed_die_cdf(rng):
         "Transformation", "Transformed die",
         f"Let $X$ be uniform on $\\{{1,\\ldots,{sides}\\}}$ and "
         f"$Y=2X+{offset}$. What is $P(Y\\le {threshold})$?",
-        value, [Fraction(cutoff_face + 1, sides),
-                Fraction(cutoff_face, sides + 1),
-                Fraction(cutoff_face - 1, sides), 1 - value],
+        show(slash(cutoff_face, sides)),
+        [show(slash(cutoff_face + 1, sides)),
+         show(slash(cutoff_face, sides + 1)),
+         show(slash(cutoff_face + 1, sides + 1)),
+         show(f"1-({slash(cutoff_face, sides)})")],
         f"$Y\\le {threshold}$ exactly when $X\\le {cutoff_face}$. "
         f"{cutoff_face} of the {sides} equally likely faces qualify, "
-        f"so $P(Y\\le {threshold})={tex(value)}$.",
+        f"so $P(Y\\le {threshold})={slash(cutoff_face, sides)}$.",
         5, rng,
     )
 
@@ -433,11 +497,13 @@ def max_dice_cdf(rng):
         "Order statistics", "Maximum: CDF",
         f"Roll {rolls} independent fair {sides}-sided dice. If $M$ is the "
         f"maximum, what is $P(M\\le {cutoff})$?",
-        value, [base, 1 - value, Fraction(cutoff - 1, sides) ** rolls,
-                value + Fraction(1, sides ** rolls)],
+        show(pow_frac(cutoff, sides, rolls)),
+        [show(slash(cutoff, sides)),
+         show(f"1-{pow_frac(cutoff, sides, rolls)}"),
+         show(pow_frac(cutoff - 1, sides, rolls)),
+         show(pow_frac(cutoff, sides, rolls + 1))],
         f"All {rolls} rolls must be at most {cutoff}, independently. "
-        f"Thus $P(M\\le {cutoff})="
-        f"(\\frac{{{cutoff}}}{{{sides}}})^{{{rolls}}}={tex(value)}$.",
+        f"Thus $P(M\\le {cutoff})={pow_frac(cutoff, sides, rolls)}$.",
         10, rng,
     )
 
@@ -449,17 +515,18 @@ def max_dice_pmf(rng):
     cdf_at_face = Fraction(face, sides) ** rolls
     cdf_below = Fraction(face - 1, sides) ** rolls
     value = cdf_at_face - cdf_below
+    answer = show(f"{pow_frac(face, sides, rolls)}-{pow_frac(face - 1, sides, rolls)}")
     return problem(
         "Order statistics", "Maximum: PMF",
         f"Roll {rolls} independent fair {sides}-sided dice. If $M$ is the "
         f"maximum, what is $P(M={face})$?",
-        value, [cdf_at_face, cdf_below, Fraction(1, sides),
-                value + Fraction(1, sides ** rolls),
-                value - Fraction(1, sides ** rolls)],
+        answer, [show(pow_frac(face, sides, rolls)),
+                 show(pow_frac(face - 1, sides, rolls)),
+                 show(slash(1, sides)),
+                 show(f"{pow_frac(face, sides, rolls)}+{pow_frac(face - 1, sides, rolls)}")],
         f"Subtract consecutive CDF values: "
-        f"$P(M={face})=P(M\\le {face})-P(M\\le {face - 1})="
-        f"(\\frac{{{face}}}{{{sides}}})^{{{rolls}}}-"
-        f"(\\frac{{{face - 1}}}{{{sides}}})^{{{rolls}}}={tex(value)}$.",
+        f"$P(M={face})={pow_frac(face, sides, rolls)}-"
+        f"{pow_frac(face - 1, sides, rolls)}$.",
         10, rng,
     )
 
@@ -475,12 +542,14 @@ def uniform_interval(rng):
         f"Let $X\\sim\\operatorname{{Uniform}}({start},{start + width})$ "
         f"be **continuous**. What is "
         f"$P({start + left}<X<{start + right})$?",
-        value, [Fraction(right, width), Fraction(left, width),
-                1 - value, Fraction(right - left, width + 1),
-                Fraction(right - left + 1, width)],
+        show(slash(right - left, width)),
+        [show(slash(right, width)), show(slash(left, width)),
+         show(f"1-({slash(right - left, width)})"),
+         show(slash(right - left, width - 1)),
+         show(slash(right - left + 1, width))],
         f"The interval has length {right - left}; the whole range has "
         f"length {width}. Continuous endpoints have probability zero, so "
-        f"$P=\\frac{{{right - left}}}{{{width}}}={tex(value)}$.",
+        f"$P={slash(right - left, width)}$.",
         None, rng, source=NIST_UNIFORM, source_relation="Formula reference",
     )
 
@@ -511,11 +580,13 @@ def uniform_maximum(rng):
         f"$X,Y\\stackrel{{\\mathrm{{iid}}}}{{\\sim}}"
         f"\\operatorname{{Uniform}}(0,{width})$ are continuous. "
         f"What is $P(\\max(X,Y)\\le {threshold})$?",
-        value, [p, 1 - value, (1 - p) ** 2,
-                Fraction(threshold + 1, width) ** 2,
-                Fraction(threshold - 1, width) ** 2],
+        show(pow_frac(threshold, width, 2)),
+        [show(slash(threshold, width)),
+         show(f"1-{pow_frac(threshold, width, 2)}"),
+         show(pow_frac(width - threshold, width, 2)),
+         show(pow_frac(threshold, width, 3))],
         f"Both independent values must be at most {threshold}. "
-        f"Thus $P=(\\frac{{{threshold}}}{{{width}}})^2={tex(value)}$.",
+        f"Thus $P={pow_frac(threshold, width, 2)}$.",
         None, rng, source=NIST_UNIFORM, source_relation="Formula reference",
     )
 
@@ -609,21 +680,36 @@ def binomial_biased(rng):
     p = rng.choice([Fraction(1, 4), Fraction(1, 3), Fraction(2, 3),
                     Fraction(3, 4)])
     value = math.comb(n, k) * p ** k * (1 - p) ** (n - k)
-    wrong = [p ** k * (1 - p) ** (n - k),
-             math.comb(n, k) * p ** (n - k) * (1 - p) ** k,
-             value + Fraction(1, 10 ** n), value - Fraction(1, 10 ** n),
-             1 - value]
+    answer = show(product(
+        rf"\binom{{{n}}}{{{k}}}",
+        pow_frac(p.numerator, p.denominator, k),
+        pow_frac((1 - p).numerator, (1 - p).denominator, n - k),
+    ))
+    swapped = show(product(
+        rf"\binom{{{n}}}{{{k}}}",
+        pow_frac(p.numerator, p.denominator, n - k),
+        pow_frac((1 - p).numerator, (1 - p).denominator, k),
+    ))
+    missing = show(product(
+        pow_frac(p.numerator, p.denominator, k),
+        pow_frac((1 - p).numerator, (1 - p).denominator, n - k),
+    ))
+    off = show(product(
+        rf"\binom{{{n}}}{{{k}}}",
+        pow_frac(p.numerator, p.denominator, k + 1),
+        pow_frac((1 - p).numerator, (1 - p).denominator, n - k - 1),
+    ))
     return problem(
         "Binomial", "Biased coin count",
         f"Flip a coin {n} times independently, with "
-        f"$P(\\text{{heads}})={tex(p)}$ each time. "
+        f"$P(\\text{{heads}})={slash(p.numerator, p.denominator)}$ each time. "
         f"What is $P(\\text{{exactly {k} heads}})$?",
-        value, [x for x in wrong if 0 <= x <= 1],
+        answer, [swapped, missing, off, show(pow_frac(p.numerator, p.denominator, n))],
         f"There are $\\binom{{{n}}}{{{k}}}={math.comb(n, k)}$ "
         f"ways to place the heads. Thus "
         f"$P(X={k})=\\binom{{{n}}}{{{k}}}"
-        f"({tex(p)})^{{{k}}}({tex(1 - p)})^{{{n - k}}}="
-        f"{tex(value)}$.",
+        f"({slash(p.numerator, p.denominator)})^{{{k}}}"
+        f"({slash((1 - p).numerator, (1 - p).denominator)})^{{{n - k}}}$.",
         None, rng, source=NIST_BINOMIAL, source_relation="Formula reference",
     )
 
@@ -652,15 +738,18 @@ def binomial_at_least_one(rng):
                     Fraction(2, 3)])
     no_success = (1 - p) ** n
     value = 1 - no_success
+    q = pow_frac((1 - p).numerator, (1 - p).denominator, n)
     return problem(
         "Binomial", "At least one success",
-        f"$X\\sim\\operatorname{{Binomial}}({n},{tex(p)})$. "
+        f"$X\\sim\\operatorname{{Binomial}}({n},{slash(p.numerator, p.denominator)})$. "
         "What is $P(X\\ge 1)$?",
-        value, [no_success, p ** n, p, 1 - p ** n,
-                value - Fraction(1, 10 ** n)],
+        show(f"1-{q}"),
+        [show(q), show(pow_frac(p.numerator, p.denominator, n)),
+         show(slash(p.numerator, p.denominator)),
+         show(f"1-{pow_frac((1 - p).numerator, (1 - p).denominator, n - 1)}"),
+         show(f"{n}{slash(p.numerator, p.denominator)}")],
         f"Subtract the zero-success probability: "
-        f"$P(X\\ge1)=1-P(X=0)=1-(1-{tex(p)})^{{{n}}}="
-        f"{tex(value)}$.",
+        f"$P(X\\ge1)=1-P(X=0)=1-{q}$.",
         None, rng, source=NIST_BINOMIAL, source_relation="Formula reference",
     )
 
