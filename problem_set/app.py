@@ -109,7 +109,6 @@ def drill():
                 text=f"Question {index + 1} of {len(quiz['questions'])}")
     st.subheader(question["kind"])
     st.markdown(question["prompt"])
-    st.caption("Choices stay in the form the problem uses, such as $(1/3)^8$ or $6/36$, not a reduced fraction.")
     if quiz["timed"]:
         seconds_left = max(0, math.ceil(question["seconds_limit"] - (now - quiz["started_at"])))
         st.metric("Time remaining", f"{seconds_left // 60}:{seconds_left % 60:02d}")
