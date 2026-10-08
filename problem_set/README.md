@@ -1,7 +1,7 @@
 # Problem Set
 
 A [Streamlit app](https://quant-practice.streamlit.app/) for quant practice.
-Press **Start 10 questions** for a random mix of probability, distributions,
+Open the app and start today's 5. The topic changes with the day: conditional probability, expectation with a decision, Bayes, bias and variance, OLS assumptions, linear algebra, distributions, or Python. The sentences are in [`SCREEN.md`](../SCREEN.md). Press **Mixed 10 instead** for a random mix of probability, distributions,
 expected value, markets and data, and mental math. Practice is untimed unless
 you turn on **Use a timer** before starting. With the timer on, Level 1 allows
 60 seconds per question, Level 2 allows 120 seconds, and Level 3 allows

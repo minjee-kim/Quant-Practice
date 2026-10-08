@@ -1,5 +1,6 @@
 """Quiz timing and scoring, independent of the webpage."""
 
+import random
 import time
 
 from questions import make_questions
@@ -33,14 +34,18 @@ def compatible_quiz(quiz):
                     for r in results))
 
 
-def new_quiz(now=None, timed=False):
+def new_quiz(now=None, timed=False, count=10, category="Mixed", level="Mixed",
+             families=None, seed=None, title=None):
+    rng = random.Random(seed) if seed is not None else None
     return {
-        "questions": make_questions(count=10),
+        "questions": make_questions(rng=rng, count=count, category=category,
+                                    level=level, families=families),
         "timed": timed,
         "index": 0,
         "started_at": time.monotonic() if now is None else now,
         "phase": "question",
         "results": [],
+        "title": title,
     }
 
 

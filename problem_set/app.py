@@ -1,6 +1,7 @@
 """Run from the repo root: python3 -m streamlit run problem_set/app.py"""
 
 import csv
+import datetime
 import io
 import math
 import re
@@ -10,9 +11,10 @@ from fractions import Fraction
 import streamlit as st
 
 from engine import compatible_quiz, new_quiz, submit
+from review import TOPICS, topic_for
 
 
-st.set_page_config(page_title="Quant Practice | Problem Set", page_icon="🧠")
+st.set_page_config(page_title="Quant Practice", page_icon="🧠")
 st.title("Quant Practice")
 
 
@@ -37,10 +39,9 @@ def display_choice(value):
 
 
 def attribution(item):
-    label = f"{item['source_relation']} {item['source_name']}"
     if item["source_url"]:
         return f"{item['source_relation']} [{item['source_name']}]({item['source_url']})"
-    return label
+    return f"{item['source_relation']} {item['source_name']}"
 
 
 def score_table(results, field, title):
@@ -61,10 +62,15 @@ def results_csv(results):
               "kind", "prompt", "selected", "answer", "correct", "timed_out",
               "seconds", "solution",
               "source_name", "source_url", "source_relation"]
-    writer = csv.DictWriter(output, fieldnames=fields)
+    writer = csv.DictWriter(output, fieldnames=fields, extrasaction="ignore")
     writer.writeheader()
     writer.writerows(results)
     return output.getvalue()
+
+
+def start_quiz(**kwargs):
+    st.session_state.quiz = new_quiz(**kwargs)
+    st.rerun()
 
 
 def drill():
@@ -79,6 +85,8 @@ def drill():
         results = quiz["results"]
         score = sum(result["correct"] for result in results)
         st.header(f"Result: {score} / {len(results)}")
+        if quiz.get("title"):
+            st.caption(quiz["title"] + " · done for today")
         if quiz["timed"]:
             st.caption(f"Average response: {sum(r['seconds'] for r in results) / len(results):.1f}s "
                        f"· Timed out: {sum(r['timed_out'] for r in results)}")
@@ -98,13 +106,15 @@ def drill():
                 st.caption(attribution(result))
         st.download_button("Download results (CSV)", data=results_csv(results),
                            file_name="quant_practice_results.csv", mime="text/csv")
-        if st.button("New set of 10", type="primary", use_container_width=True):
+        if st.button("Back", type="primary", use_container_width=True):
             del st.session_state.quiz
             st.rerun()
         return
 
     index = quiz["index"]
     question = quiz["questions"][index]
+    if quiz.get("title"):
+        st.caption(quiz["title"])
     st.progress((index + 1) / len(quiz["questions"]),
                 text=f"Question {index + 1} of {len(quiz['questions'])}")
     st.subheader(question["kind"])
@@ -126,6 +136,31 @@ def timed_drill():
     drill()
 
 
+def home():
+    today = datetime.date.today()
+    card = topic_for(today.toordinal())
+    st.subheader(card["title"])
+    st.markdown(card["say"])
+    st.caption("Trap: " + card["trap"])
+    if st.button("Start today's 5", type="primary", use_container_width=True):
+        start_quiz(count=5, category=card["category"], seed=today.toordinal(),
+                   title=card["title"])
+    timed = st.toggle("Use a timer", value=False,
+                      help="Optional on the mixed set: 1 to 3 minutes by difficulty.")
+    if st.button("Mixed 10 instead", use_container_width=True):
+        start_quiz(timed=timed, count=10, title="Mixed 10")
+    st.divider()
+    st.subheader("Topic list")
+    for item in TOPICS:
+        st.markdown(f"**{item['title']}**")
+        st.markdown(item["say"])
+        if st.button(f"Drill {item['title']}", key=f"drill_{item['key']}",
+                     use_container_width=True):
+            start_quiz(count=5, category=item["category"],
+                       seed=today.toordinal() + TOPICS.index(item),
+                       title=item["title"])
+
+
 if "quiz" in st.session_state and not compatible_quiz(st.session_state.quiz):
     del st.session_state.quiz
     for key in list(st.session_state):
@@ -133,12 +168,7 @@ if "quiz" in st.session_state and not compatible_quiz(st.session_state.quiz):
             del st.session_state[key]
 
 if "quiz" not in st.session_state:
-    st.write("10 random questions. Review the worked answers when you finish.")
-    timed = st.toggle("Use a timer", value=False,
-                      help="Optional: each question gets 1 to 3 minutes based on difficulty.")
-    if st.button("Start 10 questions", type="primary", use_container_width=True):
-        st.session_state.quiz = new_quiz(timed=timed)
-        st.rerun()
+    home()
 else:
     if st.session_state.quiz["timed"] and st.session_state.quiz["phase"] == "question":
         timed_drill()

@@ -804,11 +804,336 @@ def mental_fraction_percent(rng):
 
 
 # Levels are our practice estimates, not firm-supplied interview ratings.
+
+LA_SOURCE = (
+    "Original linear algebra drill",
+    "https://www.3blue1brown.com/lessons/essence-of-linear-algebra-page",
+)
+PYTHON_SOURCE = ("Original Python drill", None)
+REGRESSION_SOURCE = ("Original regression drill", None)
+BAYES_SOURCE = ("Original Bayes drill", None)
+
+
+def matrix_vector(rng):
+    a, b, c, d = [rng.randint(0, 4) for _ in range(4)]
+    x, y = rng.randint(1, 3), rng.randint(1, 3)
+    first, second = a * x + b * y, c * x + d * y
+    wrong = [a * x + c * y, b * x + d * y, a * y + b * x, first + 1]
+    return problem(
+        "Matrix-vector product", "Ax",
+        f"Let $A=\\begin{{bmatrix}}{a}&{b}\\\\{c}&{d}\\end{{bmatrix}}$ "
+        f"and $x=\\begin{{bmatrix}}{x}\\\\{y}\\end{{bmatrix}}$. What is $Ax$?",
+        show(rf"\begin{{bmatrix}}{first}\\{second}\end{{bmatrix}}"),
+        [show(rf"\begin{{bmatrix}}{p}\\{q}\end{{bmatrix}}") for p, q in (
+            (wrong[0], wrong[1]), (first, second + 1), (first + 1, second),
+            (a + b, c + d))],
+        f"Row-column: first entry ${a}\\cdot{x}+{b}\\cdot{y}={first}$, "
+        f"second entry ${c}\\cdot{x}+{d}\\cdot{y}={second}$.",
+        None, rng, source=LA_SOURCE, source_relation="Original drill",
+    )
+
+
+def det_2x2(rng):
+    a, b = rng.randint(1, 5), rng.randint(0, 4)
+    c, d = rng.randint(0, 4), rng.randint(1, 5)
+    value = a * d - b * c
+    return problem(
+        "Determinant", "2 by 2 determinant",
+        f"What is $\\det\\begin{{bmatrix}}{a}&{b}\\\\{c}&{d}\\end{{bmatrix}}$?",
+        value, [a * d + b * c, a * c - b * d, value + 2, value - 2, a + d],
+        f"$ad-bc={a}\\cdot{d}-{b}\\cdot{c}={value}$. "
+        "A zero determinant means the columns are linearly dependent.",
+        None, rng, source=LA_SOURCE, source_relation="Original drill",
+    )
+
+
+def row_rank(rng):
+    scale = rng.choice([2, 3])
+    row = [rng.randint(1, 3), rng.randint(1, 4)]
+    return problem(
+        "Rank", "Rank of two rows",
+        f"What is the rank of "
+        f"$\\begin{{bmatrix}}{row[0]}&{row[1]}\\\\{scale * row[0]}&{scale * row[1]}\\end{{bmatrix}}$?",
+        "1", ["0", "2", "undefined"],
+        f"The second row is {scale} times the first, so the row space is one line. Rank is 1.",
+        None, rng, source=LA_SOURCE, source_relation="Original drill",
+    )
+
+
+def diag_eigenvalues(rng):
+    p, q = rng.choice([2, 3, 4]), rng.choice([5, 6, 7])
+    return problem(
+        "Eigenvalues", "Diagonal matrix",
+        f"What are the eigenvalues of $\\mathrm{{diag}}({p},{q})$?",
+        f"{p} and {q}", [f"{p + q} and 0", f"{p * q} and 1", f"{p} only"],
+        f"A diagonal matrix acts by scaling each axis. The eigenvalues are the diagonal entries, {p} and {q}.",
+        None, rng, source=LA_SOURCE, source_relation="Original drill",
+    )
+
+
+def ols_unique(rng):
+    return problem(
+        "OLS", "Unique least squares",
+        "When does $X\\beta$ have a **unique** least-squares coefficient?",
+        "The columns of X are linearly independent",
+        ["The residuals are normal", "The errors are homoskedastic",
+         "X has more rows than columns, even if a column repeats"],
+        "Normality and homoskedasticity are not what buys uniqueness. "
+        "Unique $\\hat\\beta$ needs full column rank: no column is a linear combination of the others.",
+        None, rng, source=LA_SOURCE, source_relation="Original drill",
+    )
+
+
+def residual_orthogonal(rng):
+    return problem(
+        "Projection", "Residual and columns",
+        "In least squares, the residual vector $y-X\\hat\\beta$ is",
+        "Orthogonal to every column of X",
+        ["Orthogonal to y", "Parallel to every column of X",
+         "Zero only if the model is true"],
+        "The normal equations say $X'(y-X\\hat\\beta)=0$. "
+        "Each column of X is uncorrelated with the residual. That is the projection.",
+        None, rng, source=LA_SOURCE, source_relation="Original drill",
+    )
+
+
+def quadratic_form(rng):
+    v1, v2 = rng.randint(1, 3), rng.randint(1, 3)
+    a, b = rng.randint(1, 3), rng.randint(-2, 2)
+    # Var(a X + b Y) = a^2 v1 + b^2 v2 if independent, cov 0
+    value = a * a * v1 + b * b * v2
+    return problem(
+        "Quadratic form", "Variance of a linear combination",
+        f"$X$ and $Y$ are independent with variances {v1} and {v2}. "
+        f"What is $\\mathrm{{Var}}({a}X+{b}Y)$?",
+        value, [a * v1 + b * v2, abs(a) * v1 + abs(b) * v2, value + 2 * a * b,
+                 a * a * v1 + b * v2],
+        f"Independence drops the covariance. "
+        f"$\\mathrm{{Var}}({a}X+{b}Y)={a}^2\\cdot{v1}+{b}^2\\cdot{v2}={value}$.",
+        None, rng, source=LA_SOURCE, source_relation="Original drill",
+    )
+
+
+def rank_nullity(rng):
+    cols = rng.choice([3, 4])
+    rank = rng.randint(1, cols - 1)
+    nullity = cols - rank
+    return problem(
+        "Null space", "Rank-nullity",
+        f"A matrix has {cols} columns and rank {rank}. What is the dimension of its null space?",
+        str(nullity), [str(rank), str(cols), str(cols + rank)],
+        f"Rank-nullity: columns = rank + nullity. {cols} = {rank} + {nullity}.",
+        None, rng, source=LA_SOURCE, source_relation="Original drill",
+    )
+
+
+def slice_list(rng):
+    return problem(
+        "Slicing", "List slice",
+        "What does `[10, 20, 30, 40][0:3]` evaluate to?",
+        "[10, 20, 30]",
+        ["[10, 20, 30, 40]", "[20, 30, 40]", "[10, 20]"],
+        "A slice `a:b` starts at index a and stops before b. Indices 0, 1, 2 are 10, 20, 30.",
+        None, rng, source=PYTHON_SOURCE, source_relation="Original drill",
+    )
+
+
+def floor_div(rng):
+    return problem(
+        "Division", "Floor versus true division",
+        "What do `10 // 3` and `10 / 3` evaluate to?",
+        "3 and 3.333...",
+        ["3 and 3", "3.333... and 3", "1 and 3.333..."],
+        "`//` is floor division and returns 3. `/` is true division and returns about 3.333.",
+        None, rng, source=PYTHON_SOURCE, source_relation="Original drill",
+    )
+
+
+def append_none(rng):
+    return problem(
+        "Lists", "append return value",
+        "After `results = []`, what is the value of `results.append(5)`?",
+        "None",
+        ["[5]", "5", "[]"],
+        "`append` changes the list in place and returns None. The list is [5]; the call itself is None.",
+        None, rng, source=PYTHON_SOURCE, source_relation="Original drill",
+    )
+
+
+def range_values(rng):
+    n = rng.choice([4, 5, 6])
+    return problem(
+        "range", "range stops before the end",
+        f"Which sequence does `range({n})` produce?",
+        ", ".join(str(i) for i in range(n)),
+        [", ".join(str(i) for i in range(1, n + 1)),
+         ", ".join(str(i) for i in range(n + 1)),
+         ", ".join(str(i) for i in range(1, n))],
+        f"`range({n})` starts at 0 and stops before {n}.",
+        None, rng, source=PYTHON_SOURCE, source_relation="Original drill",
+    )
+
+
+def alias_append(rng):
+    return problem(
+        "Aliasing", "Two names, one list",
+        "Start with `a = [1, 2]` and `b = a`, then `b.append(3)`. What is `a`?",
+        "[1, 2, 3]",
+        ["[1, 2]", "[3]", "[1, 2, 3, 3]"],
+        "`b = a` does not copy. Both names point at the same list, so appending through b changes a.",
+        None, rng, source=PYTHON_SOURCE, source_relation="Original drill",
+    )
+
+
+def negative_index(rng):
+    return problem(
+        "Indexing", "Negative index",
+        "What is `[10, 20, 30, 40][-1]`?",
+        "40",
+        ["10", "30", "an error"],
+        "Index -1 is the last element. -2 is the one before that.",
+        None, rng, source=PYTHON_SOURCE, source_relation="Original drill",
+    )
+
+
+def hetero_breaks(rng):
+    return problem(
+        "OLS assumptions", "Heteroskedasticity",
+        "The errors have non-constant variance, and nothing else is wrong. What breaks?",
+        "The usual standard errors, not consistency of the coefficient",
+        ["Consistency of the coefficient",
+         "Both consistency and the usual standard errors",
+         "Nothing, if the sample is large"],
+        "Heteroskedasticity does not bias $\\hat\\beta$ under exogeneity. It does invalidate the default standard errors. Robust standard errors fix the variance estimate, not a bias that is not there.",
+        None, rng, source=REGRESSION_SOURCE, source_relation="Original drill",
+    )
+
+
+def omitted_variable(rng):
+    return problem(
+        "OLS assumptions", "Omitted variable",
+        "A left-out factor is correlated with X and with Y. What happens to $\\hat\\beta$?",
+        "It picks up part of the left-out factor",
+        ["It stays consistent; only the standard error changes",
+         "It attenuates toward zero",
+         "The fit fails to run"],
+        "This breaks errors-mean-zero-given-X. The coefficient is no longer the effect of X alone.",
+        None, rng, source=REGRESSION_SOURCE, source_relation="Original drill",
+    )
+
+
+def measurement_error(rng):
+    return problem(
+        "OLS assumptions", "Measurement error",
+        "X is observed with classical measurement error. What happens to its coefficient?",
+        "It attenuates toward zero",
+        ["Only the standard error changes",
+         "It picks up the measurement error as a positive bias",
+         "Y's measurement error is what attenuates the coefficient"],
+        "Classical error in X shrinks the coefficient toward zero. Classical error in Y inflates residual variance and does not bias the coefficient.",
+        None, rng, source=REGRESSION_SOURCE, source_relation="Original drill",
+    )
+
+
+def collinearity(rng):
+    return problem(
+        "OLS assumptions", "Near collinearity",
+        "Two regressors are nearly linear combinations of each other. What is the damage?",
+        "Variance of the coefficients inflates; they are not biased by this alone",
+        ["The coefficients become biased",
+         "The model is not identified, so there is no solution",
+         "R squared goes to zero"],
+        "Perfect collinearity means no unique solution. Near collinearity means a unique solution with a huge variance. Bias comes from endogeneity, not from correlation among the columns.",
+        None, rng, source=REGRESSION_SOURCE, source_relation="Original drill",
+    )
+
+
+def mse_split(rng):
+    return problem(
+        "Bias and variance", "MSE",
+        "For an estimator, mean squared error splits as",
+        "bias squared plus variance",
+        ["bias plus variance", "variance minus bias squared", "bias squared only"],
+        "MSE = bias squared + variance. Unbiased is not the goal if the variance is large.",
+        None, rng, source=REGRESSION_SOURCE, source_relation="Original drill",
+    )
+
+
+def ci_meaning(rng):
+    return problem(
+        "Bias and variance", "Confidence interval",
+        "A 95% confidence interval, after you have computed it, means",
+        "The procedure covers the parameter in 95% of repeated samples",
+        ["The parameter has 95% probability of lying in this interval",
+         "95% of the data lie in the interval",
+         "The null is true with probability 95%"],
+        "Coverage is a property of the procedure. The probability that the parameter sits in the interval you just computed is the Bayesian statement, not this one.",
+        None, rng, source=REGRESSION_SOURCE, source_relation="Original drill",
+    )
+
+
+def disease_given_positive(rng):
+    return problem(
+        "Bayes", "Disease given a positive test",
+        "Prevalence is 1/100. Sensitivity is 99/100. False positive rate is 5/100. "
+        "In 10,000 people, about 99 true positives and 495 false positives. "
+        "What is $P(\\text{disease}\\mid\\text{positive})$?",
+        show(slash(99, 594)),
+        [show(slash(99, 100)), show(slash(99, 495)), show("1/100"), show(slash(495, 594))],
+        "Positives are 99 + 495 = 594. Only 99 of them are diseased, so "
+        f"$P=99/594$, which is ${tex(Fraction(99, 594))}$ in lowest terms. "
+        "Sensitivity is not the answer.",
+        None, rng, source=BAYES_SOURCE, source_relation="Original drill",
+    )
+
+
+def beta_update(rng):
+    successes, trials = rng.randint(2, 5), rng.randint(6, 9)
+    mean = Fraction(1 + successes, 2 + trials)
+    return problem(
+        "Bayes", "Beta-Bernoulli update",
+        f"Prior $\\mathrm{{Beta}}(1,1)$, then {successes} successes in {trials} trials. "
+        "What is the posterior mean?",
+        mean, [Fraction(successes, trials), Fraction(1 + successes, trials),
+               Fraction(successes, 2 + trials), mean + Fraction(1, 10)],
+        f"Posterior is Beta(1+{successes}, 1+{trials - successes}). "
+        f"Mean $(1+{successes})/(2+{trials})={tex(mean)}$.",
+        None, rng, source=BAYES_SOURCE, source_relation="Original drill",
+    )
+
+
+def poisson_zero(rng):
+    lam = rng.choice([2, 3, 4])
+    return problem(
+        "Poisson", "Zero count",
+        f"$X\\sim\\mathrm{{Poisson}}({lam})$. What is $P(X=0)$?",
+        show(f"e^{{-{lam}}}"),
+        [show(f"{lam}e^{{-{lam}}}"), show(f"e^{{-{lam}}}/{lam}"), show(f"1-{lam}/10")],
+        f"$P(X=0)=e^{{-\\lambda}}/0! = e^{{-{lam}}}$. The mean and variance are both {lam}.",
+        None, rng, source=NIST_BINOMIAL, source_relation="Original drill, formula reference",
+    )
+
+
+def exponential_memory(rng):
+    wait, extra = rng.choice([2, 3, 5]), rng.choice([2, 4])
+    return problem(
+        "Exponential", "Memoryless",
+        f"$X$ is exponential. What is $P(X>{wait + extra}\\mid X>{wait})$?",
+        f"P(X>{extra})",
+        [f"P(X>{wait + extra})", f"P(X>{wait})", "It depends on how long you have waited"],
+        "An exponential clock does not age. Time left after waiting "
+        f"{wait} has the same law as a fresh draw, so the conditional probability "
+        f"equals $P(X>{extra})$.",
+        None, rng, source=NIST_UNIFORM, source_relation="Original drill, formula reference",
+    )
+
+
 LEVEL_SECONDS = {"Level 1": 60, "Level 2": 120, "Level 3": 180}
 CATEGORIES = ("Probability", "Distributions", "Expected value",
-              "Markets & data", "Mental math")
+              "Markets & data", "Mental math", "Linear algebra", "Python",
+              "Regression")
 DISTRIBUTION_FAMILIES = ("Uniform", "Normal", "Binomial", "Geometric",
-                         "Discrete dice")
+                         "Discrete dice", "Poisson", "Exponential")
 TEMPLATES = [
     (dice_sum, "Probability", "Level 1", None),
     (odd_product, "Probability", "Level 1", None),
@@ -842,6 +1167,30 @@ TEMPLATES = [
     (mental_multiply, "Mental math", "Level 1", None),
     (mental_percent, "Mental math", "Level 1", None),
     (mental_fraction_percent, "Mental math", "Level 1", None),
+    (matrix_vector, "Linear algebra", "Level 1", None),
+    (det_2x2, "Linear algebra", "Level 1", None),
+    (row_rank, "Linear algebra", "Level 1", None),
+    (diag_eigenvalues, "Linear algebra", "Level 1", None),
+    (ols_unique, "Linear algebra", "Level 2", None),
+    (residual_orthogonal, "Linear algebra", "Level 2", None),
+    (quadratic_form, "Linear algebra", "Level 2", None),
+    (rank_nullity, "Linear algebra", "Level 2", None),
+    (slice_list, "Python", "Level 1", None),
+    (floor_div, "Python", "Level 1", None),
+    (append_none, "Python", "Level 1", None),
+    (range_values, "Python", "Level 1", None),
+    (alias_append, "Python", "Level 1", None),
+    (negative_index, "Python", "Level 1", None),
+    (hetero_breaks, "Regression", "Level 1", None),
+    (omitted_variable, "Regression", "Level 1", None),
+    (measurement_error, "Regression", "Level 2", None),
+    (collinearity, "Regression", "Level 2", None),
+    (mse_split, "Regression", "Level 1", None),
+    (ci_meaning, "Regression", "Level 2", None),
+    (disease_given_positive, "Probability", "Level 2", None),
+    (beta_update, "Probability", "Level 1", None),
+    (poisson_zero, "Distributions", "Level 1", "Poisson"),
+    (exponential_memory, "Distributions", "Level 1", "Exponential"),
 ]
 GENERATORS = [generator for generator, _, _, _ in TEMPLATES]
 
